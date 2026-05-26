@@ -1,0 +1,17 @@
+{
+  "name": "h-script",
+  "version": "1.0.0",
+  "description": "H Script is a small interpreted programming language built from scratch as a learning project.\r Phase 1 focuses on making the language **work end-to-end**, not on perfect syntax or advanced optimizations.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node test/testrunner.js",
+    "repl": "node src/repl.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
