@@ -52,6 +52,9 @@ module.exports = function parse(tokens) {
     if (token.type === TOKENS.FUNCTION) return parseFunction();
     if (token.type === TOKENS.RETURN)   return parseReturn();
     if (token.type === TOKENS.CLASS)    return parseClass();
+    // Phase 3
+    if (token.type === TOKENS.TRY)      return parseTryCatch();
+    if (token.type === TOKENS.THROW)    return parseThrow();
 
     return parseExpressionStatement();
   }
@@ -85,7 +88,11 @@ module.exports = function parse(tokens) {
     const thenBlock = parseBlock();
     let elseBlock = null;
 
-    if (peek().type === TOKENS.ELSE) {
+    if (peek().type === TOKENS.ELSEIF) {
+      // baaki_sab agar (...) { } — else-if chaining
+      consume(TOKENS.ELSEIF);
+      elseBlock = parseIf(); // recursive — parseIf consumes the next 'agar'
+    } else if (peek().type === TOKENS.ELSE) {
       consume(TOKENS.ELSE);
       elseBlock = parseBlock();
     }
@@ -127,24 +134,102 @@ module.exports = function parse(tokens) {
   }
 
   // ============================
+  // PHASE 3 — TRY / CATCH / FINALLY / THROW
+  // ============================
+  function parseTryCatch() {
+    consume(TOKENS.TRY);
+    const tryBlock = parseBlock();
+
+    let catchVar   = null;
+    let catchBlock = null;
+    let finallyBlock = null;
+
+    if (peek().type === TOKENS.CATCH) {
+      consume(TOKENS.CATCH);
+      if (peek().type === TOKENS.LPAREN) {
+        consume(TOKENS.LPAREN);
+        catchVar = consume(TOKENS.IDENT).value;
+        consume(TOKENS.RPAREN);
+      }
+      catchBlock = parseBlock();
+    }
+
+    if (peek().type === TOKENS.FINALLY) {
+      consume(TOKENS.FINALLY);
+      finallyBlock = parseBlock();
+    }
+
+    if (!catchBlock && !finallyBlock) {
+      throw new ParseError(
+        "BSDK agar_risk ke baad pakad_lo ya jo_bhi_hai_bhaad_me_jaaye toh chahiye — akele try se kya hoga bc 🤡 Skill issue fr fr",
+        peek().line, peek().column
+      );
+    }
+
+    return { type: "TryCatchStatement", tryBlock, catchVar, catchBlock, finallyBlock };
+  }
+
+  function parseThrow() {
+    consume(TOKENS.THROW);
+    return { type: "ThrowStatement", argument: parseExpression() };
+  }
+
+  // ============================
   // FUNCTIONS & CLASSES
   // ============================
+
+  /**
+   * Parse a parameter list with optional default values.
+   * e.g.  pov greet(name = "yaar", age = 18) { }
+   * Returns { params: ["name","age"], defaults: { age: <AST> } }
+   */
+  function parseParamList() {
+    const params   = [];
+    const defaults = {};
+    if (peek().type !== TOKENS.RPAREN) {
+      do {
+        const paramName = consume(TOKENS.IDENT).value;
+        params.push(paramName);
+        if (peek().type === TOKENS.EQUAL) {
+          consume(TOKENS.EQUAL);
+          defaults[paramName] = parseExpression();
+        }
+        if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
+        else break;
+      } while (true);
+    }
+    return { params, defaults };
+  }
+
+  /**
+   * Parse an argument list that supports spread: fn(a, ...arr, b)
+   */
+  function parseArgList() {
+    const args = [];
+    if (peek().type !== TOKENS.RPAREN) {
+      do {
+        if (peek().type === TOKENS.SPREAD) {
+          consume(TOKENS.SPREAD);
+          args.push({ type: "SpreadElement", argument: parseExpression() });
+        } else {
+          args.push(parseExpression());
+        }
+        if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
+        else break;
+      } while (true);
+    }
+    return args;
+  }
+
   function parseFunction() {
     consume(TOKENS.FUNCTION);
     const name = consume(TOKENS.IDENT).value;
 
     consume(TOKENS.LPAREN);
-    const params = [];
-    if (peek().type !== TOKENS.RPAREN) {
-      do {
-        params.push(consume(TOKENS.IDENT).value);
-        if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
-        else break;
-      } while (true);
-    }
+    const { params, defaults } = parseParamList();
     consume(TOKENS.RPAREN);
 
-    return { type: "FunctionDeclaration", name, params, body: parseBlock() };
+    return { type: "FunctionDeclaration", name, params, defaults, body: parseBlock() };
   }
 
   function parseLet() {
@@ -202,7 +287,7 @@ module.exports = function parse(tokens) {
   }
 
   function parseAssignment() {
-    const left = parseOr();
+    const left = parseTernary();   // Phase 3: ternary sits above assignment
 
     if (peek().type === TOKENS.EQUAL) {
       if (
@@ -246,6 +331,19 @@ module.exports = function parse(tokens) {
     }
 
     return left;
+  }
+
+  // ── Phase 3: Ternary  condition ? consequent : alternate ─────────────────
+  function parseTernary() {
+    const node = parseOr();
+    if (peek().type === TOKENS.QUESTION) {
+      consume(TOKENS.QUESTION);
+      const consequent = parseAssignment();   // right-assoc
+      consume(TOKENS.COLON);
+      const alternate  = parseAssignment();
+      return { type: "TernaryExpression", condition: node, consequent, alternate };
+    }
+    return node;
   }
 
   function parseOr() {
@@ -355,16 +453,9 @@ module.exports = function parse(tokens) {
     if (token.type === TOKENS.FUNCTION) {
       consume(TOKENS.FUNCTION);
       consume(TOKENS.LPAREN);
-      const params = [];
-      if (peek().type !== TOKENS.RPAREN) {
-        do {
-          params.push(consume(TOKENS.IDENT).value);
-          if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
-          else break;
-        } while (true);
-      }
+      const { params, defaults } = parseParamList();
       consume(TOKENS.RPAREN);
-      return { type: "FunctionExpression", params, body: parseBlock() };
+      return { type: "FunctionExpression", params, defaults, body: parseBlock() };
     }
 
     // new ClassName(args)
@@ -372,16 +463,54 @@ module.exports = function parse(tokens) {
       consume(TOKENS.NEW);
       const className = consume(TOKENS.IDENT).value;
       consume(TOKENS.LPAREN);
-      const args = [];
-      if (peek().type !== TOKENS.RPAREN) {
-        do {
-          args.push(parseExpression());
-          if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
-          else break;
-        } while (true);
-      }
+      const args = parseArgList();
       consume(TOKENS.RPAREN);
       node = { type: "NewExpression", className, arguments: args };
+
+    // ── Phase 3: JugaadMap object literal { key: value, ... } ───────────
+    } else if (token.type === TOKENS.LBRACE) {
+      advance(); // consume {
+      const properties = [];
+      while (peek().type !== TOKENS.RBRACE) {
+        if (peek().type === TOKENS.EOF) {
+          throw new ParseError("JugaadMap band nahi hua bc 🪛 — missing '}' saala", peek().line, peek().column);
+        }
+        // Spread inside object: { ...other }
+        if (peek().type === TOKENS.SPREAD) {
+          consume(TOKENS.SPREAD);
+          properties.push({ spread: true, value: parseExpression() });
+        } else {
+          // Key: identifier, string, or number
+          let key;
+          if (peek().type === TOKENS.STRING) {
+            key = String(consume(TOKENS.STRING).value);
+          } else if (peek().type === TOKENS.NUMBER) {
+            key = String(consume(TOKENS.NUMBER).value);
+          } else {
+            key = consume(TOKENS.IDENT).value;
+          }
+          consume(TOKENS.COLON);
+          properties.push({ key, value: parseExpression() });
+        }
+        if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
+        else break;
+      }
+      consume(TOKENS.RBRACE);
+      node = { type: "ObjectLiteral", properties };
+
+    // ── Phase 3: Template literal `Hello ${name}!` ───────────────────────
+    } else if (token.type === TOKENS.TEMPLATE_LITERAL) {
+      advance();
+      // Each segment is either { type:"str", value } or { type:"expr", tokens:[...] }
+      // Re-parse the expr segments using this same parser (named fn expression)
+      const segments = token.value.map(seg => {
+        if (seg.type === "str") return { type: "TemplateStr", value: seg.value };
+        // Re-parse pre-lexed tokens — add synthetic EOF so parser terminates
+        const withEof = [...seg.tokens, { type: TOKENS.EOF, value: null, line: 0, column: 0 }];
+        const exprAst = parse(withEof);
+        return { type: "TemplateExpr", expr: exprAst.body[0].expression };
+      });
+      node = { type: "TemplateLiteral", segments };
 
     // BakchodList literal: [1, 2, 3]
     } else if (token.type === TOKENS.LBRACKET) {
@@ -389,7 +518,13 @@ module.exports = function parse(tokens) {
       const elements = [];
       if (peek().type !== TOKENS.RBRACKET) {
         do {
-          elements.push(parseExpression());
+          // Spread in arrays: [...arr, 4]
+          if (peek().type === TOKENS.SPREAD) {
+            consume(TOKENS.SPREAD);
+            elements.push({ type: "SpreadElement", argument: parseExpression() });
+          } else {
+            elements.push(parseExpression());
+          }
           if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
           else break;
         } while (true);
@@ -444,7 +579,7 @@ module.exports = function parse(tokens) {
         };
         continue;
       }
-      // Index access: arr[i]
+      // Index access: arr[i] or map["key"]
       if (peek().type === TOKENS.LBRACKET) {
         consume(TOKENS.LBRACKET);
         const idx = parseExpression();
@@ -452,17 +587,10 @@ module.exports = function parse(tokens) {
         node = { type: "IndexExpression", object: node, index: idx };
         continue;
       }
-      // Function call: fn(args)
+      // Function call: fn(args) — supports spread
       if (peek().type === TOKENS.LPAREN) {
         consume(TOKENS.LPAREN);
-        const args = [];
-        if (peek().type !== TOKENS.RPAREN) {
-          do {
-            args.push(parseExpression());
-            if (peek().type === TOKENS.COMMA) consume(TOKENS.COMMA);
-            else break;
-          } while (true);
-        }
+        const args = parseArgList();
         consume(TOKENS.RPAREN);
         node = { type: "CallExpression", callee: node, arguments: args };
         continue;

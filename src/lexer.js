@@ -82,6 +82,64 @@ module.exports = function lexer(input) {
       continue;
     }
 
+    // TEMPLATE LITERAL (backtick string with ${...} interpolation)  — Phase 3
+    if (char === "`") {
+      advance(); // skip opening backtick
+      const segments = [];
+      let strPart = "";
+
+      while (peek() !== "`" && index < length) {
+        // Interpolation: ${...}
+        if (peek() === "$" && nextChar() === "{") {
+          if (strPart) {
+            segments.push({ type: "str", value: strPart });
+            strPart = "";
+          }
+          advance(); advance(); // skip ${
+
+          let exprSrc = "";
+          let depth = 1;
+          while (depth > 0 && index < length) {
+            if (peek() === "{")  depth++;
+            else if (peek() === "}") { depth--; if (depth === 0) break; }
+            exprSrc += peek();
+            advance();
+          }
+          if (peek() !== "}") {
+            throw new LexerError("SAALA tera '${' expression band nahi hua bc 🫠 — '${' khola, '}' bhool gaya? Closing brace daal haramkhor", line, column);
+          }
+          advance(); // skip closing }
+
+          // Re-lex the inner expression (lexer is a named fn expression, can call itself)
+          const innerTokens = lexer(exprSrc);
+          innerTokens.pop(); // remove inner EOF
+          segments.push({ type: "expr", tokens: innerTokens });
+
+        } else if (peek() === "\\") {
+          // Escape sequences inside template literals
+          advance();
+          const esc = peek();
+          if      (esc === "n")  strPart += "\n";
+          else if (esc === "t")  strPart += "\t";
+          else if (esc === "`")  strPart += "`";
+          else if (esc === "\\") strPart += "\\";
+          else                   strPart += esc;
+          advance();
+        } else {
+          strPart += peek();
+          advance();
+        }
+      }
+
+      if (peek() !== "`") {
+        throw new LexerError("SAALA backtick khola aur band nahi kiya bc 🫠 — teri template string left on read, closing backtick daal", line, column);
+      }
+      advance(); // skip closing backtick
+      if (strPart) segments.push({ type: "str", value: strPart });
+      pushToken(TOKENS.TEMPLATE_LITERAL, segments);
+      continue;
+    }
+
     // STRINGS: "hello" (with escape sequence support)
     if (char === '"') {
       advance(); // skip opening "
@@ -118,25 +176,31 @@ module.exports = function lexer(input) {
       }
 
       // H-Script Hinglish keyword dictionary
-      if      (str === "let_him_cook")        pushToken(TOKENS.LET, str);
-      else if (str === "boliye")              pushToken(TOKENS.PRINT, str);
-      else if (str === "agar")               pushToken(TOKENS.IF, str);
-      else if (str === "warna")              pushToken(TOKENS.ELSE, str);
-      else if (str === "no_cap")             pushToken(TOKENS.TRUE, true);
-      else if (str === "fraud")              pushToken(TOKENS.FALSE, false);
-      else if (str === "jab_tak_doomscroll") pushToken(TOKENS.WHILE, str);
-      else if (str === "baar_baar")          pushToken(TOKENS.FOR, str);
-      else if (str === "nikal_lo")           pushToken(TOKENS.BREAK, str);
-      else if (str === "skip_karo")          pushToken(TOKENS.CONTINUE, str);
-      else if (str === "pov")                pushToken(TOKENS.FUNCTION, str);
-      else if (str === "wapas_karo")         pushToken(TOKENS.RETURN, str);
-      else if (str === "squad")              pushToken(TOKENS.CLASS, str);
-      else if (str === "nepo_baby_of")       pushToken(TOKENS.EXTENDS, str);
-      else if (str === "this")               pushToken(TOKENS.THIS, str);
-      else if (str === "new")                pushToken(TOKENS.NEW, str);
-      else if (str === "null")               pushToken(TOKENS.NULL, null);
-      else if (str === "buzurg")             pushToken(TOKENS.SUPER, str);
-      else                                   pushToken(TOKENS.IDENT, str);
+      if      (str === "let_him_cook")                pushToken(TOKENS.LET, str);
+      else if (str === "boliye")                      pushToken(TOKENS.PRINT, str);
+      else if (str === "agar")                        pushToken(TOKENS.IF, str);
+      else if (str === "warna")                       pushToken(TOKENS.ELSE, str);
+      else if (str === "baaki_sab")                   pushToken(TOKENS.ELSEIF, str);
+      else if (str === "no_cap")                      pushToken(TOKENS.TRUE, true);
+      else if (str === "fraud")                       pushToken(TOKENS.FALSE, false);
+      else if (str === "jab_tak_doomscroll")          pushToken(TOKENS.WHILE, str);
+      else if (str === "baar_baar")                   pushToken(TOKENS.FOR, str);
+      else if (str === "nikal_lo")                    pushToken(TOKENS.BREAK, str);
+      else if (str === "skip_karo")                   pushToken(TOKENS.CONTINUE, str);
+      else if (str === "pov")                         pushToken(TOKENS.FUNCTION, str);
+      else if (str === "wapas_karo")                  pushToken(TOKENS.RETURN, str);
+      else if (str === "squad")                       pushToken(TOKENS.CLASS, str);
+      else if (str === "nepo_baby_of")                pushToken(TOKENS.EXTENDS, str);
+      else if (str === "this")                        pushToken(TOKENS.THIS, str);
+      else if (str === "new")                         pushToken(TOKENS.NEW, str);
+      else if (str === "null")                        pushToken(TOKENS.NULL, null);
+      else if (str === "buzurg")                      pushToken(TOKENS.SUPER, str);
+      // Phase 3 keywords
+      else if (str === "agar_risk")                   pushToken(TOKENS.TRY, str);
+      else if (str === "pakad_lo")                    pushToken(TOKENS.CATCH, str);
+      else if (str === "jo_bhi_hai_bhaad_me_jaaye")  pushToken(TOKENS.FINALLY, str);
+      else if (str === "jhel_isko")                   pushToken(TOKENS.THROW, str);
+      else                                            pushToken(TOKENS.IDENT, str);
 
       continue;
     }
@@ -153,10 +217,25 @@ module.exports = function lexer(input) {
       continue;
     }
 
-    // SEMICOLON, COMMA, DOT
+    // SEMICOLON, COMMA
     if (char === ";") { pushToken(TOKENS.SEMICOLON, ";"); advance(); continue; }
     if (char === ",") { pushToken(TOKENS.COMMA, ",");     advance(); continue; }
-    if (char === ".") { pushToken(TOKENS.DOT, ".");       advance(); continue; }
+
+    // COLON — Phase 3 (ternary + object literal)
+    if (char === ":") { pushToken(TOKENS.COLON, ":"); advance(); continue; }
+
+    // TERNARY QUESTION MARK — Phase 3
+    if (char === "?") { pushToken(TOKENS.QUESTION, "?"); advance(); continue; }
+
+    // SPREAD ... — Phase 3 (must check before single DOT)
+    if (char === "." && nextChar() === "." && input[index + 2] === ".") {
+      pushToken(TOKENS.SPREAD, "...");
+      advance(); advance(); advance();
+      continue;
+    }
+
+    // DOT (member access)
+    if (char === ".") { pushToken(TOKENS.DOT, "."); advance(); continue; }
 
     // BITWISE OPERATORS — must check multi-char before single-char
     if (char === ">" && nextChar() === ">" && input[index + 2] === ">") {

@@ -1,17 +1,30 @@
 /**
- * H-Script Phase 2 — Standard Library
+ * H-Script Phase 2/3 — Standard Library
  * All functions are automatically available globally — no imports needed.
  *
- * Usage in H-Script:
- *   boliye(typeOf(42))          // "number"
- *   boliye(upperCase("hello"))  // "HELLO"
- *   boliye(powerOf(2, 10))      // 1024
+ * Phase 2: typeOf, toNumber, toString, toBool, ceiling, flooring, powerOf,
+ *           squareRoot, absValue, randomNum, lambai, upperCase, lowerCase,
+ *           trim_karo, repeat_karo, includes_kya, split_karo, replace_karo, bolao
+ *
+ * Phase 3: min, max, isNaN_kya, keys_nikalo, values_nikalo, hasKey_kya,
+ *           parseInt_karo, parseFloat_karo
  */
 
 const { RuntimeError } = require("./errors.js");
 
 function native(name, fn) {
   return { type: "NativeFunction", name, fn };
+}
+
+function isJugaadMap(val) {
+  return (
+    val !== null &&
+    typeof val === "object" &&
+    !Array.isArray(val) &&
+    val.type !== "FunctionValue" &&
+    val.type !== "NativeFunction" &&
+    Object.getPrototypeOf(val) === Object.prototype
+  );
 }
 
 module.exports = {
@@ -22,6 +35,8 @@ module.exports = {
     if (Array.isArray(val))               return "BakchodList";
     if (typeof val === "object" &&
         (val.type === "FunctionValue" || val.type === "NativeFunction")) return "pov";
+    if (isJugaadMap(val))                 return "JugaadMap";
+    if (typeof val === "object")          return "object"; // class instances
     return typeof val; // "number" | "string" | "boolean"
   }),
 
@@ -75,6 +90,33 @@ module.exports = {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }),
 
+  // ── Phase 3: Math extras ─────────────────────────────────────────────────
+  min: native("min", (args) => {
+    const nums = args.filter(a => typeof a === "number");
+    if (nums.length === 0) throw new RuntimeError("min() expects at least one number bc");
+    return Math.min(...nums);
+  }),
+
+  max: native("max", (args) => {
+    const nums = args.filter(a => typeof a === "number");
+    if (nums.length === 0) throw new RuntimeError("max() expects at least one number bc");
+    return Math.max(...nums);
+  }),
+
+  isNaN_kya: native("isNaN_kya", (args) => isNaN(args[0])),
+
+  parseInt_karo: native("parseInt_karo", (args) => {
+    const n = parseInt(String(args[0]), args[1] ?? 10);
+    if (isNaN(n)) throw new RuntimeError(`parseInt_karo: '${args[0]}' integer nahi hai bc 🤡`);
+    return n;
+  }),
+
+  parseFloat_karo: native("parseFloat_karo", (args) => {
+    const n = parseFloat(String(args[0]));
+    if (isNaN(n)) throw new RuntimeError(`parseFloat_karo: '${args[0]}' float nahi hai bc 🤡`);
+    return n;
+  }),
+
   // ── String Operations ────────────────────────────────────────────────────
   lambai: native("lambai", (args) => {
     const s = args[0];
@@ -115,6 +157,28 @@ module.exports = {
 
   replace_karo: native("replace_karo", (args) => {
     return String(args[0]).replace(String(args[1]), String(args[2]));
+  }),
+
+  // ── Phase 3: JugaadMap helpers ───────────────────────────────────────────
+  keys_nikalo: native("keys_nikalo", (args) => {
+    const val = args[0];
+    if (!isJugaadMap(val))
+      throw new RuntimeError("keys_nikalo() sirf JugaadMap pe kaam karta hai bc 🪣 — array ya class instance mat de");
+    return Object.keys(val);
+  }),
+
+  values_nikalo: native("values_nikalo", (args) => {
+    const val = args[0];
+    if (!isJugaadMap(val))
+      throw new RuntimeError("values_nikalo() sirf JugaadMap pe kaam karta hai bc 🪣");
+    return Object.values(val);
+  }),
+
+  hasKey_kya: native("hasKey_kya", (args) => {
+    const val = args[0];
+    if (!isJugaadMap(val))
+      throw new RuntimeError("hasKey_kya() sirf JugaadMap pe kaam karta hai bc 🪣");
+    return Object.prototype.hasOwnProperty.call(val, String(args[1]));
   }),
 
   // ── Input / Output ───────────────────────────────────────────────────────

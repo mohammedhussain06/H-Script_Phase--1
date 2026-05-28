@@ -1,4 +1,4 @@
-const { RuntimeError } = require("./errors.js");
+const { RuntimeError, ThrowError } = require("./errors.js");
 const stdlib = require("./utils.js");
 
 /**
@@ -20,6 +20,17 @@ function createSession() {
   // ============================
   // VALUE FORMATTING
   // ============================
+  function isJugaadMap(val) {
+    return (
+      val !== null &&
+      typeof val === "object" &&
+      !Array.isArray(val) &&
+      val.type !== "FunctionValue" &&
+      val.type !== "NativeFunction" &&
+      Object.getPrototypeOf(val) === Object.prototype
+    );
+  }
+
   function formatValue(value) {
     if (value === null || value === undefined) return "null";
     if (Array.isArray(value)) {
@@ -27,7 +38,35 @@ function createSession() {
     }
     if (typeof value === "object" && value.type === "FunctionValue")   return "<pov>";
     if (typeof value === "object" && value.type === "NativeFunction") return `<native: ${value.name}>`;
+    if (isJugaadMap(value)) {
+      const entries = Object.entries(value).map(([k, v]) => `${k}: ${formatValue(v)}`).join(", ");
+      return `JugaadMap { ${entries} }`;
+    }
     return String(value);
+  }
+
+  // ============================
+  // ARGUMENT HELPERS
+  // ============================
+  /**
+   * Evaluate an argument list that may contain SpreadElements.
+   * Spreads BakchodList (array) values into individual args.
+   */
+  function evalArgs(argNodes) {
+    const args = [];
+    for (const argNode of argNodes) {
+      if (argNode.type === "SpreadElement") {
+        const val = evaluate(argNode.argument);
+        if (Array.isArray(val)) {
+          args.push(...val);
+        } else {
+          args.push(val); // spread a non-array — just push as-is
+        }
+      } else {
+        args.push(evaluate(argNode));
+      }
+    }
+    return args;
   }
 
   // ============================
@@ -76,10 +115,11 @@ function createSession() {
         if (value?.type === "FunctionValue" || value?.type === "NativeFunction") {
           throw new RuntimeError("TU PHOEBE BUFFAY SE BHI ZYADA CONFUSED HAI BC 🙊 — boliye() ko poora function diya?? '() lagao' sunne mein nahi aata?? L + ratio + skill issue. Print kar function ka RESULT, function ko nahi chutiye");
         }
-        // null prints as "null"; arrays print as BakchodList; everything else uses Node's default
         if (value === null || value === undefined) {
           console.log("null");
         } else if (Array.isArray(value)) {
+          console.log(formatValue(value));
+        } else if (isJugaadMap(value)) {
           console.log(formatValue(value));
         } else {
           console.log(value);
@@ -138,8 +178,9 @@ function createSession() {
       case "FunctionDeclaration": {
         const fn = {
           type: "FunctionValue",
-          params: node.params,
-          body: node.body,
+          params:   node.params,
+          defaults: node.defaults || {},
+          body:     node.body,
           closureEnv: null,
           ownerClass: null,
         };
@@ -151,8 +192,9 @@ function createSession() {
       case "FunctionExpression":
         return {
           type: "FunctionValue",
-          params: node.params,
-          body: node.body,
+          params:   node.params,
+          defaults: node.defaults || {},
+          body:     node.body,
           closureEnv: currentEnv,
           ownerClass: null,
         };
@@ -174,6 +216,22 @@ function createSession() {
 
       case "NewExpression":
         return evaluateNew(node);
+
+      // ── Phase 3 ──────────────────────────────────────────────────────────
+      case "TryCatchStatement":
+        return evaluateTryCatch(node);
+
+      case "ThrowStatement":
+        return evaluateThrow(node);
+
+      case "TernaryExpression":
+        return evaluateTernary(node);
+
+      case "ObjectLiteral":
+        return evaluateObjectLiteral(node);
+
+      case "TemplateLiteral":
+        return evaluateTemplateLiteral(node);
 
       default:
         throw new RuntimeError("H-Script ne kaha: 'Yeh AST node toh KGF Chapter 3 jaisi hai — exist nahi karti!' 🫥 BSDK " + node.type + " is NOT the vibe. Rocky bhai bhi confuse ho gaye. Skibidi toilet level mistake hai yeh");
@@ -240,13 +298,18 @@ function createSession() {
     }
 
     if (node.target.type === "IndexExpression") {
-      const arr = evaluate(node.target.object);
+      const obj = evaluate(node.target.object);
       const idx = evaluate(node.target.index);
-      if (!Array.isArray(arr)) {
-        throw new RuntimeError("BHAI [] sirf BakchodList pe kaam karta hai 💨 — Tu Pushpa ki tarah 'main jhukunga nahi' bol raha hai but indexing rules pe toh jhukna padega bc. Yeh array nahi hai, NPC move tha yeh saala");
+      if (Array.isArray(obj)) {
+        obj[idx] = value;
+        return value;
       }
-      arr[idx] = value;
-      return value;
+      // Phase 3: JugaadMap index assignment
+      if (obj !== null && typeof obj === "object") {
+        obj[idx] = value;
+        return value;
+      }
+      throw new RuntimeError("BHAI [] assignment sirf BakchodList aur JugaadMap pe hota hai bc 💥 — yeh toh na array hai na object");
     }
 
     throw new RuntimeError("Assignment ka yeh scene Vikram Vedha se bhi zyada confusing hai BSDK 💩 — Target completely invalid, Vikram bhi nahi samjha yeh kya tha. L + ratio + fell off");
@@ -294,14 +357,21 @@ function createSession() {
     }
   }
 
+  // ── Phase 3: Ternary ─────────────────────────────────────────────────────
+  function evaluateTernary(node) {
+    return evaluate(node.condition) ? evaluate(node.consequent) : evaluate(node.alternate);
+  }
+
   // ============================
   // CONTROL FLOW
   // ============================
   function evaluateIf(node) {
     const cond = evaluate(node.condition);
-    const branch = cond ? node.thenBlock : node.elseBlock;
-    if (!branch) return;
-    return evaluate(branch);
+    if (cond) {
+      return evaluate(node.thenBlock);
+    } else if (node.elseBlock) {
+      return evaluate(node.elseBlock); // works for both BlockStatement and IfStatement (else-if)
+    }
   }
 
   function evaluateWhile(node) {
@@ -327,21 +397,99 @@ function createSession() {
     }
   }
 
+  // ── Phase 3: Try / Catch / Finally ───────────────────────────────────────
+  function evaluateTryCatch(node) {
+    try {
+      return evaluate(node.tryBlock);
+    } catch (err) {
+      if (node.catchBlock) {
+        const previousEnv = currentEnv;
+        const catchEnv    = Object.create(currentEnv);
+
+        // Bind the caught value to the catch variable
+        if (node.catchVar) {
+          catchEnv[node.catchVar] = (err instanceof ThrowError)
+            ? err.thrownValue          // user-thrown value via jhel_isko
+            : (err.message || String(err));  // system error message string
+        }
+
+        currentEnv = catchEnv;
+        const result = evaluateBlock(node.catchBlock);
+        currentEnv = previousEnv;
+        return result;
+      }
+    } finally {
+      // jo_bhi_hai_bhaad_me_jaaye — always runs
+      if (node.finallyBlock) evaluate(node.finallyBlock);
+    }
+  }
+
+  // ── Phase 3: Throw ───────────────────────────────────────────────────────
+  function evaluateThrow(node) {
+    const value = evaluate(node.argument);
+    throw new ThrowError(value);
+  }
+
   // ============================
   // BAKCHODLIST (Arrays)
   // ============================
   function evaluateArrayLiteral(node) {
-    return node.elements.map((el) => evaluate(el));
+    const result = [];
+    for (const el of node.elements) {
+      if (el.type === "SpreadElement") {
+        // Phase 3: spread ...arr into array literal
+        const val = evaluate(el.argument);
+        if (!Array.isArray(val)) throw new RuntimeError("BSDK spread sirf BakchodList pe hota hai 🪣 — non-array spread karna? Skill issue fr fr. GigaChad move nahi tha yeh");
+        result.push(...val);
+      } else {
+        result.push(evaluate(el));
+      }
+    }
+    return result;
   }
 
   function evaluateIndex(node) {
     const obj = evaluate(node.object);
     const idx = evaluate(node.index);
-    if (!Array.isArray(obj)) {
-      throw new RuntimeError("SAALA [] sirf BakchodList ke liye hai 😩 — Tu Spider-Man No Way Home ki tarah wrong universe mein ghus gaya bc. Yeh array nahi hai. GigaChad move nahi tha yeh. Slay differently haramkhor");
+    if (Array.isArray(obj)) {
+      const result = obj[idx];
+      return result !== undefined ? result : null;
     }
-    const result = obj[idx];
-    return result !== undefined ? result : null;
+    // Phase 3: JugaadMap index access map["key"]
+    if (obj !== null && typeof obj === "object") {
+      const result = obj[idx];
+      return result !== undefined ? result : null;
+    }
+    throw new RuntimeError("SAALA [] sirf BakchodList aur JugaadMap ke liye hai 😩 — Tu Spider-Man No Way Home ki tarah wrong universe mein ghus gaya bc. Yeh array bhi nahi, object bhi nahi. Slay differently haramkhor");
+  }
+
+  // ── Phase 3: JugaadMap ──────────────────────────────────────────────────
+  function evaluateObjectLiteral(node) {
+    const obj = {};
+    for (const prop of node.properties) {
+      if (prop.spread) {
+        // { ...other } — merge another JugaadMap
+        const spreadVal = evaluate(prop.value);
+        if (spreadVal !== null && typeof spreadVal === "object" && !Array.isArray(spreadVal)) {
+          Object.assign(obj, spreadVal);
+        }
+      } else {
+        obj[prop.key] = evaluate(prop.value);
+      }
+    }
+    return obj;
+  }
+
+  // ── Phase 3: Template Literal ────────────────────────────────────────────
+  function evaluateTemplateLiteral(node) {
+    return node.segments.map(seg => {
+      if (seg.type === "TemplateStr") return seg.value;
+      const val = evaluate(seg.expr);
+      if (val === null || val === undefined) return "null";
+      if (Array.isArray(val)) return formatValue(val);
+      if (isJugaadMap(val)) return formatValue(val);
+      return String(val);
+    }).join("");
   }
 
   // ============================
@@ -365,7 +513,7 @@ function createSession() {
 
       // ── BakchodList built-in method calls ──────────────────────────────
       if (Array.isArray(obj)) {
-        const args = node.arguments.map((a) => evaluate(a));
+        const args = evalArgs(node.arguments);
         switch (prop) {
           case "daalo":      obj.push(args[0] ?? null); return null;         // push
           case "nikalo":     return obj.pop() ?? null;                       // pop
@@ -392,7 +540,7 @@ function createSession() {
 
     // ── Native stdlib function ────────────────────────────────────────────
     if (fn?.type === "NativeFunction") {
-      const args = node.arguments.map((a) => evaluate(a));
+      const args = evalArgs(node.arguments);
       return fn.fn(args);
     }
 
@@ -405,15 +553,25 @@ function createSession() {
       throw new RuntimeError(`'${name}' function nahi hai BSDK 🤡 — Yeh Vijay Deverakonda coded hai — all looks, no callable, no rizz. L + ratio + no function + fell off. Define karo ya sahi naam use karo haramkhor`);
     }
 
-    const args = node.arguments.map((a) => evaluate(a));
+    const args = evalArgs(node.arguments);
     const previousEnv = currentEnv;
     const callEnv = Object.create(fn.closureEnv);
     callEnv.this = thisValue;
     callEnv.__class__ = fn.ownerClass ?? null; // for buzurg (super) resolution
     currentEnv = callEnv;
 
+    // Bind params — apply default values where arg is missing/null
     for (let i = 0; i < fn.params.length; i++) {
-      callEnv[fn.params[i]] = args[i] ?? null;
+      const arg = args[i];
+      if ((arg === undefined || arg === null) && fn.defaults && fn.defaults[fn.params[i]] !== undefined) {
+        // Evaluate default in the closure env
+        const savedEnv = currentEnv;
+        currentEnv = fn.closureEnv;
+        callEnv[fn.params[i]] = evaluate(fn.defaults[fn.params[i]]);
+        currentEnv = savedEnv;
+      } else {
+        callEnv[fn.params[i]] = arg ?? null;
+      }
     }
 
     const prevInsideMethod = insideMethod;
@@ -427,7 +585,7 @@ function createSession() {
   }
 
   function evaluateSuperCall(methodName, argNodes) {
-    const thisObj = currentEnv.this;
+    const thisObj   = currentEnv.this;
     const className = currentEnv.__class__;
 
     if (!className) {
@@ -447,7 +605,7 @@ function createSession() {
       );
     }
 
-    const args = argNodes.map((a) => evaluate(a));
+    const args = evalArgs(argNodes);
     const previousEnv = currentEnv;
     const callEnv = Object.create(method.closureEnv);
     callEnv.this = thisObj;
@@ -476,8 +634,9 @@ function createSession() {
     for (const m of node.methods) {
       methods[m.name] = {
         type: "FunctionValue",
-        params: m.params,
-        body: m.body,
+        params:   m.params,
+        defaults: m.defaults || {},
+        body:     m.body,
         closureEnv: currentEnv,
         ownerClass: node.name,  // needed for buzurg (super) resolution
       };
@@ -512,7 +671,7 @@ function createSession() {
     // Auto-call init (constructor) if it exists, passing new() args
     if (instance.init) {
       const fn = instance.init;
-      const args = node.arguments.map((a) => evaluate(a));
+      const args = evalArgs(node.arguments);
       const previousEnv = currentEnv;
       const callEnv = Object.create(fn.closureEnv);
       callEnv.this = instance;
@@ -550,8 +709,8 @@ function createSession() {
       throw new RuntimeError(`'${prop}' null pe access karna?? TU CHUTIYA HAI KYA BC 😭 — Yeh ZNMD ka road trip nahi hai jahan sab kuch possible ho. Null object ka koi property nahi hota saala. Pehle null check kar NPC`);
     }
 
-    // Private property enforcement
-    if (prop.startsWith("_") && !insideMethod) {
+    // Private property enforcement (only for class instances, not JugaadMap)
+    if (prop.startsWith("_") && !insideMethod && !isJugaadMap(obj)) {
       throw new RuntimeError(`'${prop}' is PRIVATE PROPERTY bc 🔒 — CAUGHT IN 4K trying to access this. Yeh James Bond ka MI6 HQ hai, tu Mission Impossible wala tha kya saala? Squad-exclusive zone. Bahar teri aukat nahi. L + ratio`);
     }
 

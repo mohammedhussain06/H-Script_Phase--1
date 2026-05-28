@@ -1,5 +1,5 @@
 /**
- * H-Script Phase 2 — Custom Error System
+ * H-Script Phase 2/3 — Custom Error System
  * Errors carry line + column AND maximum vibe energy.
  */
 
@@ -41,4 +41,20 @@ class RuntimeError extends HScriptError {
   }
 }
 
-module.exports = { HScriptError, LexerError, ParseError, RuntimeError };
+/**
+ * ThrowError — fired by `jhel_isko` inside H-Script.
+ * Extends HScriptError so testrunner + REPL display it cleanly.
+ * thrownValue holds the original H-Script value that was thrown.
+ */
+class ThrowError extends HScriptError {
+  constructor(value) {
+    const msg = (value === null || value === undefined)
+      ? "null"
+      : String(value);
+    super(msg, null, null);
+    this.name  = "UchhalError 🪃";
+    this.thrownValue = value;  // raw H-Script value for pakad_lo catch binding
+  }
+}
+
+module.exports = { HScriptError, LexerError, ParseError, RuntimeError, ThrowError };

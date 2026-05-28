@@ -32,7 +32,7 @@ const C = {
 // ── Banner ───────────────────────────────────────────────────────────────────
 console.log(`
 ${C.cyan}${C.bold}╔══════════════════════════════════════════╗
-║    🔥  H-Script v2.0  —  REPL  🔥       ║
+║    🔥  H-Script v3.0  —  REPL  🔥       ║
 ║    Type H-Script code and run it!        ║
 ╚══════════════════════════════════════════╝${C.reset}
 ${C.dim}  Commands: :help  :clear  :quit${C.reset}
@@ -72,60 +72,73 @@ function runCode(code) {
 
 // ── Help text ────────────────────────────────────────────────────────────────
 const HELP = `
-${C.bold}${C.cyan}H-Script v2.0 — Language Reference${C.reset}
-${"─".repeat(46)}
+${C.bold}${C.cyan}H-Script v3.0 — Language Reference${C.reset}
+${"─".repeat(50)}
 ${C.cyan}Variables & Output${C.reset}
   let_him_cook x = 42
-  boliye(x)                      → prints x
+  boliye(x)                         → print with newline
+  bolao("no newline")               → print without newline
 
 ${C.cyan}Control Flow${C.reset}
-  agar (x > 5) { } warna { }    → if / else
-  jab_tak_doomscroll (cond) { } → while loop
-  baar_baar (let_him_cook i = 0; i < 5; i++) { }
+  agar (x > 5) { } warna { }       → if / else
+  agar (x>5) { } baaki_sab agar (x>0) { } warna { }  → else-if
+  jab_tak_doomscroll (cond) { }    → while loop
+  baar_baar (let_him_cook i=0; i<5; i++) { }
 
-${C.cyan}Functions (pov)${C.reset}
-  pov add(a, b) { wapas_karo a + b }
-  boliye(add(2, 3))              → 5
+${C.cyan}Functions (pov) + Default Params${C.reset}
+  pov add(a, b = 0) { wapas_karo a + b }
+  boliye(add(2, 3))                 → 5
+  boliye(add(2))                    → 2  (b defaults to 0)
 
-${C.cyan}Classes (squad)${C.reset}
-  squad Animal {
-    pov init(name) { this.name = name }
-    pov speak() { boliye(this.name) }
-  }
+${C.cyan}Classes (squad) + Inheritance${C.reset}
   squad Dog nepo_baby_of Animal {
     pov speak() { buzurg.speak()  boliye("Bho!") }
   }
-  let_him_cook d = new Dog("Rocky")
-  d.speak()
+  let_him_cook d = new Dog("Rocky")  d.speak()
 
-${C.cyan}BakchodList (Arrays)${C.reset}
+${C.cyan}BakchodList (Arrays) + Spread${C.reset}
   let_him_cook arr = [1, 2, 3]
-  arr.daalo(4)                   → push
-  arr.nikalo()                   → pop
-  boliye(arr.lambai)             → length
-  boliye(arr[0])                 → index access
-  arr[0] = 99                    → index assign
-  arr.palat()                    → reverse
-  arr.sort_karo()                → sort numerically
-  boliye(arr.milao(", "))        → join to string
+  let_him_cook b = [...arr, 4, 5]   → spread into new array
+  boliye(arr.lambai)                → length
+  arr.daalo(4)  arr.nikalo()        → push / pop
+  arr.palat()   arr.sort_karo()     → reverse / sort
+  boliye(arr.milao(", "))           → join to string
+  boliye(arr[0])   arr[0] = 99      → index get / set
 
-${C.cyan}Null & Booleans${C.reset}
-  let_him_cook x = null
-  no_cap  fraud                  → true  false
+${C.cyan}JugaadMap (Dictionary)${C.reset}
+  let_him_cook m = { name: "Rocky", age: 21 }
+  boliye(m.name)   boliye(m["age"])
+  m.city = "Mumbai"
+  let_him_cook c = { ...m, level: 9 }  → object spread
+  keys_nikalo(m)   values_nikalo(m)    hasKey_kya(m, "name")
 
-${C.cyan}Stdlib (auto-available)${C.reset}
-  typeOf(x)      toNumber("5")   toString(42)
-  ceiling(3.2)   flooring(3.9)   powerOf(2, 8)
-  squareRoot(9)  absValue(-5)    randomNum(1, 10)
-  upperCase(s)   lowerCase(s)    lambai(s)
-  trim_karo(s)   includes_kya(s, sub)
-  split_karo(s, sep)             replace_karo(s, from, to)
+${C.cyan}Template Literals${C.reset}
+  boliye(\`Hello \${name}!\`)          → string interpolation
+  boliye(\`Sum: \${a + b}\`)           → expressions in \${}
+
+${C.cyan}Ternary${C.reset}
+  boliye(x > 0 ? "pos" : "neg")     → condition ? a : b
+
+${C.cyan}Try / Catch / Finally${C.reset}
+  agar_risk { jhel_isko "oops" }
+  pakad_lo (e) { boliye(e) }
+  jo_bhi_hai_bhaad_me_jaaye { boliye("cleanup") }
+
+${C.cyan}Stdlib — Phase 2${C.reset}
+  typeOf  toNumber  toString  toBool
+  ceiling  flooring  powerOf  squareRoot  absValue  randomNum
+  upperCase  lowerCase  lambai  trim_karo  repeat_karo
+  includes_kya  split_karo  replace_karo  bolao
+
+${C.cyan}Stdlib — Phase 3${C.reset}
+  min(...)  max(...)  isNaN_kya()  parseInt_karo()  parseFloat_karo()
+  keys_nikalo()  values_nikalo()  hasKey_kya()
 
 ${C.cyan}REPL Commands${C.reset}
   :help    Show this reference
   :clear   Clear the screen
   :quit    Exit the REPL
-${"─".repeat(46)}
+${"─".repeat(50)}
 `;
 
 // ── Main prompt loop ──────────────────────────────────────────────────────────

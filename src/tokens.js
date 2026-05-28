@@ -44,6 +44,7 @@ module.exports = {
   // If-else
   IF: "AGAR",
   ELSE: "WARNA",
+  ELSEIF: "BAAKI_SAB",         // baaki_sab agar → else-if  (Phase 3)
 
   // Comparison operators
   GREATER: "GREATER",
@@ -92,6 +93,18 @@ module.exports = {
   THIS: "THIS",
   EXTENDS: "NEPO_BABY_OF",
   SUPER: "SUPER",        // buzurg
+
+  // ── Phase 3 ──────────────────────────────────────────────────────────────
+  TRY:     "AGAR_RISK",                  // agar_risk { }
+  CATCH:   "PAKAD_LO",                   // pakad_lo (e) { }
+  FINALLY: "JO_BHI_HAI_BHAAD_ME_JAAYE", // jo_bhi_hai_bhaad_me_jaaye { }
+  THROW:   "JHEL_ISKO",                  // jhel_isko "message"
+
+  QUESTION: "QUESTION",  // ?  (ternary)
+  COLON:    "COLON",     // :  (ternary + object literal)
+  SPREAD:   "SPREAD",    // ...
+
+  TEMPLATE_LITERAL: "TEMPLATE_LITERAL",  // `Hello ${name}!`
 
   // Special
   EOF: "EOF",
