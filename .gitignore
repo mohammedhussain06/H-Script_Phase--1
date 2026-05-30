@@ -1,19 +1,61 @@
-# Node
+# ── Node / JS ────────────────────────────────────────────
 node_modules/
+dist/
+build/
+.vite/
+*.local
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# ── Environment variables ─────────────────────────────────
+.env
+.env.*
+!.env.example
 
-# OS
+# ── Python / AI ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+*.so
+
+# ── OS ───────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Editor
-.vscode/
+# ── Editors ──────────────────────────────────────────────
+.vscode/settings.json
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Coverage / temp
-coverage/
-tmp/
+# ── Logs ─────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# ── MongoDB ──────────────────────────────────────────────
+data/db/
+
+# ── ML models (too large for git) ────────────────────────
+*.bin
+*.pt
+*.pth
+*.onnx
+models/
