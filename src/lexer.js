@@ -200,6 +200,8 @@ module.exports = function lexer(input) {
       else if (str === "pakad_lo")                    pushToken(TOKENS.CATCH, str);
       else if (str === "jo_bhi_hai_bhaad_me_jaaye")  pushToken(TOKENS.FINALLY, str);
       else if (str === "jhel_isko")                   pushToken(TOKENS.THROW, str);
+      // Phase 4
+      else if (str === "lele")                        pushToken(TOKENS.IMPORT, str);
       else                                            pushToken(TOKENS.IDENT, str);
 
       continue;

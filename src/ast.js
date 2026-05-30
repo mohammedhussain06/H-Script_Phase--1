@@ -26,6 +26,9 @@ const AST = {
     ({ type: "TryCatchStatement", tryBlock, catchVar, catchBlock, finallyBlock }),
   ThrowStatement:     (argument)                                => ({ type: "ThrowStatement", argument }),
 
+  // ── Phase 4 ──────────────────────────────────────────────────────────────
+  ImportStatement:    (path)                                    => ({ type: "ImportStatement", path }),
+
   // ── Declarations ─────────────────────────────────────────────────────────
   FunctionDeclaration:(name, params, defaults, body)            => ({ type: "FunctionDeclaration", name, params, defaults, body }),
   ClassDeclaration:   (name, parent, methods)                   => ({ type: "ClassDeclaration", name, parent, methods }),

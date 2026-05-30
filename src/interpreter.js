@@ -6,7 +6,12 @@ const stdlib = require("./utils.js");
  * The same globalEnv and classes dict are reused across multiple run() calls.
  * This is what the REPL uses so variables persist between lines.
  */
-function createSession() {
+function createSession(options = {}) {
+  const basePath = options.basePath || process.cwd();
+  const fs       = require("fs");
+  const nodePath = require("path");
+  const _lexer   = require("./lexer.js");
+  const _parser  = require("./parser.js");
   const globalEnv = {};
   const classes = {};
   let currentEnv = globalEnv;
@@ -67,6 +72,39 @@ function createSession() {
       }
     }
     return args;
+  }
+
+  // ============================
+  // FUNCTION CALL HELPER (used by HOF methods)
+  // ============================
+  /**
+   * callFn(fn, args) — invoke an H-Script FunctionValue or NativeFunction
+   * directly with a pre-built args array. Used by forEach_karo, map_karo, etc.
+   */
+  function callFn(fn, args) {
+    if (fn?.type === "NativeFunction") return fn.fn(args);
+    if (!fn || fn.type !== "FunctionValue") {
+      throw new RuntimeError("forEach_karo/map_karo expects a pov function bc 🤡 — tu function ki jagah kuch aur de raha hai. Skill issue haramkhor");
+    }
+    const previousEnv = currentEnv;
+    const callEnv = Object.create(fn.closureEnv);
+    callEnv.__class__ = fn.ownerClass ?? null;
+    for (let i = 0; i < fn.params.length; i++) {
+      const arg = args[i];
+      if ((arg === undefined || arg === null) && fn.defaults && fn.defaults[fn.params[i]] !== undefined) {
+        const savedEnv = currentEnv;
+        currentEnv = fn.closureEnv;
+        callEnv[fn.params[i]] = evaluate(fn.defaults[fn.params[i]]);
+        currentEnv = savedEnv;
+      } else {
+        callEnv[fn.params[i]] = arg ?? null;
+      }
+    }
+    currentEnv = callEnv;
+    const result = evaluateBlock(fn.body);
+    currentEnv = previousEnv;
+    if (result?.type === "RETURN") return result.value;
+    return null;
   }
 
   // ============================
@@ -223,6 +261,10 @@ function createSession() {
 
       case "ThrowStatement":
         return evaluateThrow(node);
+
+      // ── Phase 4 ──────────────────────────────────────────────────────────
+      case "ImportStatement":
+        return evaluateImport(node);
 
       case "TernaryExpression":
         return evaluateTernary(node);
@@ -430,6 +472,27 @@ function createSession() {
     throw new ThrowError(value);
   }
 
+  // ── Phase 4: Import ─────────────────────────────────────────────────────
+  function evaluateImport(node) {
+    const filePath = nodePath.resolve(basePath, node.path);
+    let code;
+    try {
+      code = fs.readFileSync(filePath, "utf8");
+    } catch (e) {
+      throw new RuntimeError(
+        `lele fail ho gaya bc 📁 — '${node.path}' nahi mila saala. File exist karta hai? Path check kar haramkhor. Even Google Maps isse nahi dhundh sakta`
+      );
+    }
+    const tokens = _lexer(code);
+    const ast    = _parser(tokens);
+    // Execute the imported file's top-level declarations into global env
+    const savedEnv = currentEnv;
+    currentEnv = globalEnv;
+    evaluateProgram(ast);
+    currentEnv = savedEnv;
+  }
+
+
   // ============================
   // BAKCHODLIST (Arrays)
   // ============================
@@ -523,6 +586,53 @@ function createSession() {
           case "milao":      return obj.join(args[0] ?? ", ");               // join to string
           case "slice_karo": return obj.slice(args[0], args[1]);             // slice
           case "dhundo":     return obj.indexOf(args[0]);                    // indexOf (-1 if not found)
+          // ── Phase 4: Higher-Order Functions ────────────────────────────
+          case "forEach_karo": {                                              // forEach
+            const cb = args[0];
+            for (let idx = 0; idx < obj.length; idx++) {
+              callFn(cb, [obj[idx], idx, obj]);
+            }
+            return null;
+          }
+          case "map_karo": {                                                  // map
+            const cb = args[0];
+            const mapped = [];
+            for (let idx = 0; idx < obj.length; idx++) {
+              mapped.push(callFn(cb, [obj[idx], idx, obj]));
+            }
+            return mapped;
+          }
+          case "filter_karo": {                                               // filter
+            const cb = args[0];
+            const filtered = [];
+            for (let idx = 0; idx < obj.length; idx++) {
+              if (callFn(cb, [obj[idx], idx, obj])) filtered.push(obj[idx]);
+            }
+            return filtered;
+          }
+          case "reduce_karo": {                                               // reduce
+            const cb  = args[0];
+            let acc   = args[1] ?? null;
+            for (let idx = 0; idx < obj.length; idx++) {
+              acc = callFn(cb, [acc, obj[idx], idx, obj]);
+            }
+            return acc;
+          }
+          case "koi_bhi": {                                                   // some
+            const cb = args[0];
+            for (const item of obj) { if (callFn(cb, [item])) return true; }
+            return false;
+          }
+          case "sab_sahi": {                                                  // every
+            const cb = args[0];
+            for (const item of obj) { if (!callFn(cb, [item])) return false; }
+            return true;
+          }
+          case "dhundo_karo": {                                               // find
+            const cb = args[0];
+            for (const item of obj) { if (callFn(cb, [item])) return item; }
+            return null;
+          }
           default:
             throw new RuntimeError(`BakchodList bol raha hai 'I don't know her, who is she??' 🙅 — '${prop}' method hai hi nahi bc. Yeh array hai Avengers team nahi ki sab kuch support kare saala. L + ratio`);
         }
@@ -726,11 +836,12 @@ function createSession() {
 }
 
 /**
- * Default export: interpreter(ast)
+ * Default export: interpreter(ast, options)
  * Creates a fresh session for each call — used by testrunner.js.
+ * options.basePath — directory used to resolve lele (import) paths.
  */
-function interpreter(ast) {
-  return createSession().run(ast);
+function interpreter(ast, options = {}) {
+  return createSession(options).run(ast);
 }
 
 interpreter.createSession = createSession;

@@ -75,6 +75,7 @@ agar_risk {
 | **Phase 1** | ✅ Complete | Core language |
 | **Phase 2** | ✅ Complete | Arrays, OOP, stdlib, REPL, errors |
 | **Phase 3** | ✅ Complete | Try/catch, templates, JugaadMap, spread, ternary |
+| **Phase 4** | ✅ Complete | HOF array methods, import system |
 
 ---
 
@@ -265,6 +266,88 @@ agar (score >= 90) {
 
 ---
 
+## Phase 4 — Functional Power
+
+### Higher-Order Array Functions
+
+All methods accept a `pov` callback. Chain them for expressive pipelines:
+
+```
+let_him_cook nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+// forEach_karo — iterate (no return)
+nums.forEach_karo(pov(n) { boliye(n) })
+
+// map_karo — transform
+let_him_cook squares = nums.map_karo(pov(n) { wapas_karo n * n })
+boliye(squares.milao(", "))    // 1, 4, 9, 16, 25...
+
+// filter_karo — keep matching
+let_him_cook evens = nums.filter_karo(pov(n) { wapas_karo n % 2 == 0 })
+boliye(evens.milao(", "))      // 2, 4, 6, 8, 10
+
+// reduce_karo — fold to single value
+let_him_cook sum = nums.reduce_karo(pov(acc, n) { wapas_karo acc + n }, 0)
+boliye(sum)                    // 55
+
+// koi_bhi — any match? (some)
+boliye(nums.koi_bhi(pov(n) { wapas_karo n > 9 }))   // true
+
+// sab_sahi — all match? (every)
+boliye(nums.sab_sahi(pov(n) { wapas_karo n > 0 }))  // true
+
+// dhundo_karo — find first match
+let_him_cook big = nums.dhundo_karo(pov(n) { wapas_karo n > 7 })
+boliye(big)                    // 8
+```
+
+### Method Chaining
+
+```
+// Sum of squares of even numbers
+let_him_cook result = nums
+  .filter_karo(pov(n) { wapas_karo n % 2 == 0 })
+  .map_karo(pov(n) { wapas_karo n * n })
+  .reduce_karo(pov(acc, n) { wapas_karo acc + n }, 0)
+boliye(result)   // 220
+```
+
+### Import System — `lele`
+
+```
+// math_utils.hs
+pov add(a, b) { wapas_karo a + b }
+pov factorial(n) {
+  agar (n <= 1) { wapas_karo 1 }
+  wapas_karo n * factorial(n - 1)
+}
+let_him_cook PI = 3.14159
+
+// main.hs
+lele "math_utils.hs"
+boliye(add(2, 3))       // 5
+boliye(factorial(6))    // 720
+boliye(PI)              // 3.14159
+```
+
+- Path resolves **relative to the importing file**
+- Functions, variables, and classes all get imported
+- Supports nested imports
+
+### HOF Method Reference
+
+| Method | JS Equivalent | Returns |
+|---|---|---|
+| `arr.forEach_karo(fn)` | `forEach` | `null` |
+| `arr.map_karo(fn)` | `map` | new BakchodList |
+| `arr.filter_karo(fn)` | `filter` | new BakchodList |
+| `arr.reduce_karo(fn, init)` | `reduce` | any |
+| `arr.koi_bhi(fn)` | `some` | boolean |
+| `arr.sab_sahi(fn)` | `every` | boolean |
+| `arr.dhundo_karo(fn)` | `find` | element or `null` |
+
+---
+
 ## The Error System 🎬
 
 H-Script errors carry **line + column** info and are written with maximum chaos energy — Bollywood references, Indian internet slang, Hollywood memes, and mild cuss words.
@@ -310,8 +393,12 @@ H-Script_Phase--1-main/
 │   └── repl.js         → Interactive REPL
 ├── test/
 │   ├── testrunner.js         → Auto test runner
-│   ├── error_test.js         → Meme error showcase
-│   ├── full_demo.hs          → All-features demo
+│   ├── error_test.js         → Meme error showcase (all 4 phases)
+│   ├── master_test.hs        → All-phases integration test
+│   ├── full_demo.hs          → Feature demo
+│   ├── hof_test.hs           → HOF methods (Phase 4)
+│   ├── import_test.hs        → lele import system (Phase 4)
+│   ├── math_helper.hs        → Utility file for import tests
 │   ├── phase3_vibe.hs        → Phase 3 integration test
 │   ├── trycatch_test.hs      → Try/catch/finally/throw
 │   ├── interpolation_test.hs → Template literals
@@ -329,7 +416,8 @@ H-Script_Phase--1-main/
 ├── docs/
 │   ├── Phase1.md       → Phase 1 reference
 │   ├── Phase2.md       → Phase 2 reference
-│   └── Phase3.md       → Phase 3 reference
+│   ├── Phase3.md       → Phase 3 reference
+│   └── Phase4.md       → Phase 4 reference
 └── package.json
 ```
 
@@ -363,6 +451,7 @@ H-Script_Phase--1-main/
 | `pakad_lo` | catch |
 | `jo_bhi_hai_bhaad_me_jaaye` | finally |
 | `jhel_isko` | throw |
+| `lele` | import file |
 
 ---
 

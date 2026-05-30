@@ -55,6 +55,8 @@ module.exports = function parse(tokens) {
     // Phase 3
     if (token.type === TOKENS.TRY)      return parseTryCatch();
     if (token.type === TOKENS.THROW)    return parseThrow();
+    // Phase 4
+    if (token.type === TOKENS.IMPORT)   return parseImport();
 
     return parseExpressionStatement();
   }
@@ -172,6 +174,13 @@ module.exports = function parse(tokens) {
   function parseThrow() {
     consume(TOKENS.THROW);
     return { type: "ThrowStatement", argument: parseExpression() };
+  }
+
+  // ── Phase 4: Import ──────────────────────────────────────────────────────
+  function parseImport() {
+    consume(TOKENS.IMPORT);
+    const pathToken = consume(TOKENS.STRING);
+    return { type: "ImportStatement", path: pathToken.value };
   }
 
   // ============================

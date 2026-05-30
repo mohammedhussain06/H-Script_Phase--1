@@ -106,6 +106,9 @@ module.exports = {
 
   TEMPLATE_LITERAL: "TEMPLATE_LITERAL",  // `Hello ${name}!`
 
+  // Phase 4
+  IMPORT: "IMPORT",  // lele "file.hs"
+
   // Special
   EOF: "EOF",
 };

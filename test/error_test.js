@@ -149,5 +149,73 @@ tryRun(
    test()`
 );
 
+tryRun(
+  "Private property accessed outside class (James Bond MI6)",
+  `squad Vault {
+     pov init() { this._secret = 42 }
+   }
+   let_him_cook v = new Vault()
+   boliye(v._secret)`
+);
+
+// ── PHASE 3 ERRORS ────────────────────────────────────────────────────────────
+console.log(`\n${C.bold}${C.cyan}━━━  PHASE 3 ERRORS 🎬  ━━━${C.reset}`);
+
+tryRun(
+  "Unclosed template literal (backtick left on read)",
+  "let_him_cook x = `Hello ${name}"
+);
+
+tryRun(
+  "Unclosed interpolation ${} (missing closing brace)",
+  "let_him_cook x = `Hello ${name`"
+);
+
+tryRun(
+  "agar_risk with no pakad_lo or finally (skill issue)",
+  `agar_risk { boliye("lonely try") }`
+);
+
+tryRun(
+  "jhel_isko uncaught (UchhalError raw throw)",
+  `jhel_isko "Yeh error pakda nahi gaya bc!"`
+);
+
+tryRun(
+  "SuperExpression standalone (Darth Vader announcing himself)",
+  `boliye(buzurg)`
+);
+
+// ── PHASE 4 ERRORS ────────────────────────────────────────────────────────────
+console.log(`\n${C.bold}${C.cyan}━━━  PHASE 4 ERRORS 🏗️  ━━━${C.reset}`);
+
+tryRun(
+  "forEach_karo with non-function (skill issue haramkhor)",
+  `let_him_cook arr = [1, 2, 3]
+   arr.forEach_karo(99)`
+);
+
+tryRun(
+  "map_karo with non-function",
+  `let_him_cook arr = [1, 2, 3]
+   arr.map_karo("not a function")`
+);
+
+tryRun(
+  "lele file not found (Google Maps can't help)",
+  `lele "does_not_exist.hs"`
+);
+
+tryRun(
+  "Spread non-array in array literal",
+  `let_him_cook x = 42
+   let_him_cook bad = [...x]`
+);
+
+tryRun(
+  "JugaadMap keys_nikalo on non-map (skill issue)",
+  `keys_nikalo([1, 2, 3])`
+);
+
 console.log(`\n${C.bold}${C.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`);
 console.log(`${C.bold}  Jai H-Script! Mogambo khush hua. 🎉${C.reset}\n`);

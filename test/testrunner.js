@@ -46,7 +46,7 @@ function runFile(filePath) {
     const origLog = console.log;
     console.log = (...args) => lines.push(args.join(" "));
 
-    interpreter(ast);
+    interpreter(ast, { basePath: path.dirname(path.resolve(filePath)) });
     console.log = origLog;
 
     console.log(`${C.green}✅ PASS${C.reset} ${C.bold}${name}${C.reset}`);
