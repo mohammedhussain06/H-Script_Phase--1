@@ -1,4 +1,8 @@
-/* ── Login Page ────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   Login / Sign-Up Page
+   ════════════════════════════════════════════════════════ */
+
+/* ── Page shell ──────────────────────────────────────── */
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -7,6 +11,23 @@
   position: relative;
   overflow: hidden;
   padding: 80px 24px 40px;
+}
+
+/* Animated grid */
+.login__bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124,58,237,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  animation: gridDrift 24s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes gridDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 56px 56px; }
 }
 
 /* Background orbs */
@@ -33,16 +54,16 @@
   right: -80px;
 }
 
-/* Card */
+/* ── Card ────────────────────────────────────────────── */
 .login-card {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  padding: 48px 40px;
+  padding: 40px 36px 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -50,7 +71,7 @@
   box-shadow: var(--shadow-card), 0 0 60px rgba(124,58,237,0.1);
 }
 
-/* Logo */
+/* Logo link */
 .login__logo {
   display: flex;
   align-items: center;
@@ -58,7 +79,10 @@
   font-size: 22px;
   font-weight: 800;
   color: var(--text-primary);
+  text-decoration: none;
+  transition: opacity 0.2s;
 }
+.login__logo:hover { opacity: 0.8; }
 
 .login__logo-icon {
   display: inline-flex;
@@ -73,38 +97,205 @@
   font-weight: 900;
 }
 
+/* ── Tab switcher ─────────────────────────────────────── */
+.login__tabs {
+  display: flex;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  width: 100%;
+  gap: 4px;
+}
+
+.login__tab {
+  flex: 1;
+  padding: 9px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  font-family: var(--font-sans);
+}
+
+.login__tab.active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* Title + sub */
 .login__title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
   text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .login__sub {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--text-secondary);
   text-align: center;
   line-height: 1.6;
-  margin: 0;
+  margin: -8px 0 0;
 }
 
-/* OAuth buttons */
-.login__btns {
+/* ── Form ────────────────────────────────────────────── */
+.login__form {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.login__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.login__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+
+.login__input-wrap {
+  position: relative;
+  display: flex;
+}
+
+.login__input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login__input::placeholder { color: var(--text-muted); }
+
+.login__input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+}
+
+/* Password eye toggle */
+.login__eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  padding: 0;
+}
+.login__eye:hover { color: var(--text-primary); }
+
+/* When there's a password eye, add right padding to input */
+.login__input-wrap .login__input { padding-right: 42px; }
+
+/* Inline error */
+.login__error {
+  font-size: 12px;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.login__error::before { content: '⚠'; font-size: 11px; }
+
+/* Field error state */
+.login__field.has-error .login__input {
+  border-color: rgba(248,113,113,0.6);
+  box-shadow: 0 0 0 3px rgba(248,113,113,0.1);
+}
+
+/* Forgot password row */
+.login__forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.login__forgot {
+  background: none;
+  border: none;
+  color: var(--accent-primary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+  font-family: var(--font-sans);
+}
+.login__forgot:hover { opacity: 0.7; }
+
+/* Submit button */
+.login__submit {
+  width: 100%;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: center;
+  margin-top: 4px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.3px;
+}
+
+/* ── Divider ─────────────────────────────────────────── */
+.login__divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
   gap: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.login__divider::before,
+.login__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── OAuth buttons ───────────────────────────────────── */
+.login__btns {
+  display: flex;
+  gap: 10px;
   width: 100%;
 }
 
 .login__btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
-  font-size: 15px;
+  gap: 9px;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -114,12 +305,11 @@
 .login__btn--github {
   background: #24292e;
   color: white;
-  border-color: #333;
+  border-color: #444;
 }
-
 .login__btn--github:hover {
   background: #2f363d;
-  border-color: #555;
+  border-color: #666;
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
@@ -128,14 +318,13 @@
   background: var(--bg-elevated);
   color: var(--text-primary);
 }
-
 .login__btn--google:hover {
   background: var(--bg-overlay);
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 
-/* Terms */
+/* ── Terms ───────────────────────────────────────────── */
 .login__terms {
   font-size: 12px;
   color: var(--text-muted);
@@ -149,7 +338,55 @@
   text-decoration: none;
   font-weight: 500;
 }
+.login__guest a:hover { text-decoration: underline; }
 
-.login__guest a:hover {
-  text-decoration: underline;
+/* ── Success state ───────────────────────────────────── */
+.login__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  text-align: center;
+  animation: fadeUp 0.4s ease forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login__success-icon   { font-size: 52px; }
+
+.login__success-title  {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.login__success-msg {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.login__success-btn {
+  margin-top: 8px;
+  padding: 12px 28px;
+  font-size: 15px;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 32px 22px 28px;
+  }
+  .login__btns {
+    flex-direction: column;
+  }
+  .login__btn {
+    flex: none;
+  }
 }

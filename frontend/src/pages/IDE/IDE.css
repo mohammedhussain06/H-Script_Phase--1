@@ -1,0 +1,317 @@
+/* ── IDE Page — Cyberpunk Layout ────────────────────────── */
+.ide {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #08080e;
+  overflow: hidden;
+  padding-top: 0; /* No navbar on IDE — full screen */
+}
+
+/* ── Top Bar ──────────────────────────────────────────── */
+.ide__topbar {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  background: #0c0c18;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 0;
+  padding: 0;
+}
+
+/* Logo / Home link */
+.ide__logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 100%;
+  border-right: 1px solid var(--border);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.ide__logo:hover { background: rgba(124,58,237,0.1); }
+
+.ide__logo-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #7c3aed, #f97316);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: white;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.ide__logo-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* File tabs */
+.ide__tabs {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ide__tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-right: 1px solid var(--border);
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  cursor: default;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.ide__tab--active {
+  background: #0a0a14;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--accent-primary);
+}
+
+.ide__tab-icon { font-size: 14px; }
+
+.ide__tab-name {
+  cursor: text;
+}
+
+.ide__tab-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  width: 120px;
+}
+
+.ide__tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f97316;
+  flex-shrink: 0;
+}
+
+/* Actions */
+.ide__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+.ide__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.ide__btn--clear {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.ide__btn--clear:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.ide__btn--docs {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.ide__btn--docs:hover {
+  background: rgba(124,58,237,0.12);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.ide__btn--save {
+  background: rgba(249,115,22,0.12);
+  border-color: rgba(249,115,22,0.35);
+  color: #fb923c;
+}
+.ide__btn--save:hover {
+  background: rgba(249,115,22,0.22);
+  border-color: #f97316;
+  color: #f97316;
+}
+
+.ide__btn--icon {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border);
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  font-size: 15px;
+}
+.ide__btn--icon:hover {
+  background: rgba(255,255,255,0.09);
+  color: var(--text-primary);
+}
+
+
+.ide__btn--run {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border-color: #7c3aed;
+  box-shadow: 0 0 16px rgba(124,58,237,0.3);
+  min-width: 90px;
+  justify-content: center;
+}
+
+.ide__btn--run:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 0 24px rgba(124,58,237,0.5);
+  transform: translateY(-1px);
+}
+
+.ide__btn--run:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ide__btn--run.running {
+  background: linear-gradient(135deg, #1a1a2e, #1a1a2e);
+  border-color: #facc15;
+  color: #facc15;
+  box-shadow: 0 0 16px rgba(250,204,21,0.2);
+}
+
+/* ── Panels ───────────────────────────────────────────── */
+.ide__panels {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.ide__editor-panel,
+.ide__terminal-panel {
+  height: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Divider */
+.ide__divider {
+  width: 6px;
+  background: transparent;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-left:  1px solid var(--border);
+  border-right: 1px solid var(--border);
+  transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+}
+
+.ide__divider:hover {
+  background: rgba(124,58,237,0.15);
+}
+
+.ide__divider:hover .ide__divider-handle {
+  background: var(--accent-primary);
+}
+
+.ide__divider-handle {
+  width: 2px;
+  height: 40px;
+  background: var(--border-accent);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+/* ── Status Bar ───────────────────────────────────────── */
+.ide__statusbar {
+  height: 24px;
+  background: #7c3aed;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.ide__status-lang {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: 0.5px;
+}
+
+.ide__status-hint {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  flex: 1;
+}
+
+.ide__status-lines {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  font-family: var(--font-mono);
+}
+
+.ide__status-info {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  font-family: var(--font-mono);
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .ide__panels {
+    flex-direction: column;
+  }
+  .ide__editor-panel,
+  .ide__terminal-panel {
+    width: 100% !important;
+    height: 50%;
+  }
+  .ide__divider {
+    width: 100%;
+    height: 6px;
+    cursor: row-resize;
+    border-left: none;
+    border-right: none;
+    border-top:    1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .ide__divider-handle {
+    width: 40px;
+    height: 2px;
+  }
+}

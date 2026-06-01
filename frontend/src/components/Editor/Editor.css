@@ -1,0 +1,44 @@
+.editor-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  position: relative;
+}
+
+/* Override Monaco's default bg to match our cyberpunk theme */
+.monaco-editor,
+.monaco-editor-background,
+.monaco-editor .margin {
+  background-color: #0a0a12 !important;
+}
+
+/* ── Loading Skeleton ─────────────────────────────────── */
+.editor-skeleton {
+  position: absolute;
+  inset: 0;
+  background: #0a0a12;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.editor-skeleton__line {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    rgba(124,58,237,0.08) 25%,
+    rgba(124,58,237,0.18) 50%,
+    rgba(124,58,237,0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

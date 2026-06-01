@@ -108,3 +108,23 @@ body {
 code, pre {
   font-family: var(--font-mono);
 }
+
+/* ── Page padding for Navbar ────────────────────────── */
+/* Pages that have Navbar need top padding */
+.landing,
+.login-page,
+.dashboard {
+  padding-top: 72px;
+}
+
+/* ── Link reset ─────────────────────────────────────── */
+a { color: inherit; text-decoration: none; }
+
+/* ── Shared syntax token classes ─────────────────────── */
+/* Used in both CodePreviewSection and Docs */
+.ch-keyword  { color: #a78bfa; font-weight: 600; }
+.ch-special  { color: #f97316; }
+.ch-string   { color: #86efac; }
+.ch-number   { color: #fb923c; }
+.ch-comment  { color: #4a4a6a; font-style: italic; }
+.ch-output   { color: #22d3ee; }
