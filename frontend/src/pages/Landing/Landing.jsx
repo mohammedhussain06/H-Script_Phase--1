@@ -1,6 +1,19 @@
-// Landing Page — Phase 5A
-// TODO: Three.js hero, feature sections, CTAs
 import React from 'react'
+import HeroSection       from './HeroSection.jsx'
+import FeaturesSection   from './FeaturesSection.jsx'
+import CodePreviewSection from './CodePreviewSection.jsx'
+import HowItWorksSection from './HowItWorksSection.jsx'
+import Footer            from './Footer.jsx'
+import './Landing.css'
+
 export default function Landing() {
-  return <div className="page-landing"><h1>H-Script 🔥</h1><p>Coming soon...</p></div>
+  return (
+    <main className="landing" id="landing-page">
+      <HeroSection />
+      <FeaturesSection />
+      <CodePreviewSection />
+      <HowItWorksSection />
+      <Footer />
+    </main>
+  )
 }

@@ -1,0 +1,5 @@
+/* Landing page — background gradient strip */
+.landing {
+  background:
+    radial-gradient(ellipse 100% 50% at 50% -10%, rgba(124,58,237,0.15) 0%, transparent 60%);
+}
