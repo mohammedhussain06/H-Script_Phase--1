@@ -1,0 +1,40 @@
+// This is your Prisma schema file
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // For production (PostgreSQL), change to:
+  //   provider = "postgresql"
+  // And set DATABASE_URL to your Supabase/Neon connection string
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String?           // null for OAuth-only users
+  provider     String   @default("local")  // local | github | google
+  providerId   String?           // OAuth provider's user ID
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  files        File[]
+}
+
+model File {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename  String
+  code      String
+  lines     Int      @default(0)
+  runs      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

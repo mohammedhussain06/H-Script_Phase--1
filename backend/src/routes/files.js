@@ -1,8 +1,20 @@
-const express = require('express');
-const router  = express.Router();
-// TODO: Phase 5B — CRUD for user .hs files
-router.get('/',        (req, res) => res.json({ files: [] }));
-router.post('/',       (req, res) => res.json({ msg: 'create file' }));
-router.put('/:id',     (req, res) => res.json({ msg: 'update file' }));
-router.delete('/:id',  (req, res) => res.json({ msg: 'delete file' }));
-module.exports = router;
+const express = require('express')
+const { requireAuth } = require('../middleware/auth')
+const { validateFile } = require('../middleware/validate')
+const {
+  getFiles, getFile, createFile, updateFile, deleteFile, incrementRun,
+} = require('../controllers/filesController')
+
+const router = express.Router()
+
+// All file routes require authentication
+router.use(requireAuth)
+
+router.get('/',           getFiles)
+router.get('/:id',        getFile)
+router.post('/',          validateFile, createFile)
+router.put('/:id',        updateFile)
+router.delete('/:id',     deleteFile)
+router.post('/:id/run',   incrementRun)
+
+module.exports = router

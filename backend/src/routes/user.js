@@ -1,5 +1,10 @@
-const express = require('express');
-const router  = express.Router();
-// TODO: Phase 5B — Current user profile
-router.get('/', (req, res) => res.json({ user: req.user || null }));
-module.exports = router;
+const express = require('express')
+const { requireAuth } = require('../middleware/auth')
+const { getProfile, updateProfile } = require('../controllers/userController')
+
+const router = express.Router()
+
+router.get('/profile',  requireAuth, getProfile)
+router.put('/profile',  requireAuth, updateProfile)
+
+module.exports = router
