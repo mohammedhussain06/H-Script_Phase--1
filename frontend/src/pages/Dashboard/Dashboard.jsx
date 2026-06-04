@@ -1,49 +1,70 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Toast from '../../components/Toast/Toast.jsx'
-import { getAllFiles, deleteFile, formatRelative, saveFile } from '../../utils/fileStorage.js'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { filesApi } from '../../api/files.js'
+import { formatRelative } from '../../utils/fileStorage.js'
 import './Dashboard.css'
 
 const QUICK_ACTIONS = [
-  { icon: '⚡', label: 'Open IDE',    to: '/ide' },
-  { icon: '📖', label: 'Read Docs',   to: '/docs' },
-  { icon: '🏠', label: 'Home',        to: '/' },
+  { icon: '⚡', label: 'Open IDE',  to: '/ide' },
+  { icon: '📖', label: 'Read Docs', to: '/docs' },
+  { icon: '🏠', label: 'Home',      to: '/' },
 ]
 
 export default function Dashboard() {
+  const { user, isLoggedIn, logout, loading: authLoading } = useAuth()
   const [files,   setFiles]   = useState([])
+  const [loading, setLoading] = useState(true)
   const [toast,   setToast]   = useState(null)
   const navigate              = useNavigate()
 
-  // Load files from localStorage
-  useEffect(() => {
-    setFiles(getAllFiles())
-  }, [])
-
   const showToast = (msg, type = 'info') => setToast({ msg, type })
 
-  const handleDelete = (id, name) => {
+  // ── Load files from backend (or show empty if not logged in) ──
+  useEffect(() => {
+    if (authLoading) return
+    if (!isLoggedIn) { setLoading(false); return }
+
+    filesApi.getAll()
+      .then(setFiles)
+      .catch(() => showToast('Could not load files', 'error'))
+      .finally(() => setLoading(false))
+  }, [isLoggedIn, authLoading])
+
+  // ── Delete file ───────────────────────────────────────────
+  const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return
-    const updated = deleteFile(id)
-    setFiles(updated)
-    showToast(`"${name}" deleted`, 'error')
+    try {
+      await filesApi.remove(id)
+      setFiles(prev => prev.filter(f => f.id !== id))
+      showToast(`"${name}" deleted`, 'error')
+    } catch {
+      showToast('Could not delete file', 'error')
+    }
   }
 
+  // ── Open file in IDE ──────────────────────────────────────
   const handleOpen = (file) => {
-    // Encode the code in the URL so IDE can load it
     const encoded = btoa(unescape(encodeURIComponent(file.code)))
-    navigate(`/ide?code=${encoded}`)
+    navigate(`/ide?code=${encoded}&fileId=${file.id}`)
   }
 
-  // ── Stats ────────────────────────────────────────────
-  const totalLines = files.reduce((sum, f) => sum + (f.lines || 0), 0)
-  const totalRuns  = files.reduce((sum, f) => sum + (f.runs  || 0), 0)
+  // ── Logout ────────────────────────────────────────────────
+  const handleLogout = async () => {
+    await logout()
+    navigate('/')
+  }
+
+  // ── Stats ─────────────────────────────────────────────────
+  const totalLines = files.reduce((s, f) => s + (f.lines || 0), 0)
+  const totalRuns  = files.reduce((s, f) => s + (f.runs  || 0), 0)
 
   const STATS = [
-    { label: 'Files Saved',  value: files.length,  icon: '📄' },
+    { label: 'Files Saved',   value: files.length, icon: '📄' },
     { label: 'Lines Written', value: totalLines,    icon: '📝' },
-    { label: 'Total Runs',   value: totalRuns,      icon: '▶' },
-    { label: 'Phase',        value: '5A',           icon: '🚀' },
+    { label: 'Total Runs',    value: totalRuns,     icon: '▶' },
+    { label: 'Phase',         value: '5B',          icon: '🚀' },
   ]
 
   return (
@@ -56,12 +77,43 @@ export default function Dashboard() {
         <div className="dashboard__header">
           <div>
             <h1 className="dashboard__title">Dashboard</h1>
-            <p className="dashboard__sub">Welcome back, coder. Kya plan hai aaj? 🔥</p>
+            <p className="dashboard__sub">
+              {isLoggedIn
+                ? `Welcome back, ${user?.name?.split(' ')[0] || 'coder'} 🔥`
+                : 'Welcome, guest! Login to save files across devices.'}
+            </p>
           </div>
-          <Link to="/ide" className="btn-primary dashboard__new-btn" id="dash-new-file">
-            + New File
-          </Link>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {isLoggedIn ? (
+              <button
+                className="btn-secondary"
+                onClick={handleLogout}
+                id="dash-logout"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link to="/login" className="btn-primary" id="dash-login">Login</Link>
+            )}
+            <Link to="/ide" className="btn-primary dashboard__new-btn" id="dash-new-file">
+              + New File
+            </Link>
+          </div>
         </div>
+
+        {/* User info badge */}
+        {isLoggedIn && user && (
+          <div className="dash-user-badge">
+            {user.avatar && <img src={user.avatar} alt={user.name} className="dash-user-avatar" />}
+            <div>
+              <div className="dash-user-name">{user.name}</div>
+              <div className="dash-user-email">{user.email}</div>
+            </div>
+            <span className={`dash-user-provider dash-user-provider--${user.provider}`}>
+              {user.provider}
+            </span>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="dashboard__stats">
@@ -69,7 +121,7 @@ export default function Dashboard() {
             <div key={i} className="dash-stat" style={{ animationDelay: `${i * 80}ms` }}>
               <span className="dash-stat__icon">{s.icon}</span>
               <div>
-                <div className="dash-stat__value">{s.value}</div>
+                <div className="dash-stat__value">{loading ? '...' : s.value}</div>
                 <div className="dash-stat__label">{s.label}</div>
               </div>
             </div>
@@ -80,7 +132,18 @@ export default function Dashboard() {
         <div className="dashboard__section">
           <h2 className="dashboard__section-title">Your Files</h2>
 
-          {files.length === 0 ? (
+          {!isLoggedIn ? (
+            <div className="dash-empty">
+              <span className="dash-empty__icon">🔐</span>
+              <p>Login to save and sync your H-Script files.</p>
+              <Link to="/login" className="btn-primary" id="dash-empty-login">Login / Sign Up</Link>
+            </div>
+          ) : loading ? (
+            <div className="dash-empty">
+              <span className="dash-empty__icon">⟳</span>
+              <p>Loading your files...</p>
+            </div>
+          ) : files.length === 0 ? (
             <div className="dash-empty">
               <span className="dash-empty__icon">📂</span>
               <p>No saved files yet.</p>
@@ -122,8 +185,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-
-              {/* New file card */}
               <Link to="/ide" className="dash-file-card dash-file-card--new" id="dash-new-card">
                 <span className="dash-file-card__new-icon">+</span>
                 <span className="dash-file-card__new-text">New File</span>

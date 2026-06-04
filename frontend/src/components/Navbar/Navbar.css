@@ -98,6 +98,17 @@
   font-size: 14px;
 }
 
+.navbar__btn-signup {
+  padding: 8px 18px;
+  font-size: 14px;
+  border-color: var(--accent-secondary) !important;
+  color: var(--accent-secondary) !important;
+}
+
+.navbar__btn-signup:hover {
+  background: rgba(249, 115, 22, 0.1) !important;
+}
+
 /* Hamburger */
 .navbar__hamburger {
   display: none;

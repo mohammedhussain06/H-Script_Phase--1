@@ -71,6 +71,53 @@
   font-size: 15px;
 }
 
+/* User badge */
+.dash-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 32px;
+}
+
+.dash-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.dash-user-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dash-user-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dash-user-provider {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.dash-user-provider--local  { background: rgba(124,58,237,0.15); color: #a78bfa; }
+.dash-user-provider--github { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+.dash-user-provider--google { background: rgba(66,133,244,0.15);  color: #60a5fa; }
+
 /* Stats */
 .dashboard__stats {
   display: grid;

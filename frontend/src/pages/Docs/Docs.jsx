@@ -17,6 +17,9 @@ function useCopy() {
 /* ── Code Block with copy + try-in-IDE ──────────────── */
 function CodeBlock({ id, code, label }) {
   const { copied, copy } = useCopy()
+  const encoded = (() => {
+    try { return btoa(unescape(encodeURIComponent(code))) } catch { return '' }
+  })()
   return (
     <div className="docs-code-block">
       {label && <div className="docs-code-label">{label}</div>}
@@ -28,7 +31,7 @@ function CodeBlock({ id, code, label }) {
         {copied === id ? '✓ Copied!' : '⧉ Copy'}
       </button>
       <pre className="docs-code-pre"><code dangerouslySetInnerHTML={{ __html: highlight(code) }} /></pre>
-      <Link to="/ide" className="docs-try-btn" title="Open in IDE">
+      <Link to={`/ide?code=${encoded}`} className="docs-try-btn" title="Open this code in IDE">
         ▶ Try in IDE
       </Link>
     </div>

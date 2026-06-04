@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext.jsx'
 import './Login.css'
 
 /* ── Simple field validator ─────────────────────────── */
@@ -17,12 +18,18 @@ function validate(tab, fields) {
 }
 
 export default function Login() {
-  const [tab,       setTab]       = useState('login')   // 'login' | 'signup'
+  const { login, signup } = useAuth()
+  const navigate          = useNavigate()
+  const [searchParams]    = useSearchParams()
+  const initialTab        = searchParams.get('tab') === 'signup' ? 'signup' : 'login'
+
+  const [tab,       setTab]       = useState(initialTab)
   const [fields,    setFields]    = useState({ name: '', email: '', password: '', confirm: '' })
   const [errors,    setErrors]    = useState({})
+  const [apiError,  setApiError]  = useState('')
   const [showPass,  setShowPass]  = useState(false)
   const [showConf,  setShowConf]  = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [loading,   setLoading]   = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -31,19 +38,30 @@ export default function Login() {
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate(tab, fields)
     if (Object.keys(errs).length) { setErrors(errs); return }
-    setSubmitted(true)
-    // ── TODO: connect to backend API in Phase 5B ──
-    // For now shows a "coming soon" state
+    setLoading(true)
+    setApiError('')
+    try {
+      if (tab === 'login') {
+        await login(fields.email, fields.password)
+      } else {
+        await signup(fields.name, fields.email, fields.password)
+      }
+      navigate('/dashboard')
+    } catch (err) {
+      setApiError(err.response?.data?.error || 'Something went wrong. Try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const switchTab = (t) => {
     setTab(t)
     setErrors({})
-    setSubmitted(false)
+    setApiError('')
   }
 
   return (
@@ -92,24 +110,9 @@ export default function Login() {
             : "Join the H-Script community. It\u2019s free forever."}
         </p>
 
-        {/* ── Success state ─────────────────────── */}
-        {submitted ? (
-          <div className="login__success">
-            <span className="login__success-icon">🎉</span>
-            <p className="login__success-title">
-              {tab === 'login' ? 'Logging you in...' : 'Account created!'}
-            </p>
-            <p className="login__success-msg">
-              Backend integration coming in Phase 5B. For now, use the IDE as guest!
-            </p>
-            <Link to="/ide" className="btn-primary login__success-btn" id="success-ide-link">
-              ⚡ Open IDE
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* ── Manual form ───────────────────── */}
-            <form className="login__form" onSubmit={handleSubmit} noValidate id="auth-form">
+        {/* ── Manual form ───────────────────── */}
+        <>
+          <form className="login__form" onSubmit={handleSubmit} noValidate id="auth-form">
 
               {/* Name — signup only */}
               {tab === 'signup' && (
@@ -210,8 +213,18 @@ export default function Login() {
                 </div>
               )}
 
-              <button type="submit" className="btn-primary login__submit" id="btn-submit">
-                {tab === 'login' ? '→ Login' : '→ Create Account'}
+              {/* API error */}
+              {apiError && (
+                <div className="login__api-error">{apiError}</div>
+              )}
+
+              <button
+                type="submit"
+                className="btn-primary login__submit"
+                id="btn-submit"
+                disabled={loading}
+              >
+                {loading ? '⟳ Please wait...' : tab === 'login' ? '→ Login' : '→ Create Account'}
               </button>
             </form>
 
@@ -250,8 +263,7 @@ export default function Login() {
               </span>
             </p>
           </>
-        )}
-      </div>
+        </div>
     </main>
   )
 }

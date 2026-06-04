@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { navbarEntrance } from '../../animations/animations'
+import { useAuth } from '../../context/AuthContext.jsx'
 import './Navbar.css'
 
 export default function Navbar() {
@@ -8,6 +9,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen]   = useState(false)
   const navRef                    = useRef(null)
   const location                  = useLocation()
+  const navigate                  = useNavigate()
+  const { isLoggedIn, logout }    = useAuth()
 
   // Scroll-aware frosted glass
   useEffect(() => {
@@ -53,8 +56,22 @@ export default function Navbar() {
 
         {/* Auth */}
         <div className="navbar__auth">
-          <Link to="/ide"   className="btn-secondary navbar__btn-try">Try IDE</Link>
-          <Link to="/login" className="btn-primary  navbar__btn-login">Login</Link>
+          <Link to="/ide" className="btn-secondary navbar__btn-try">Try IDE</Link>
+          {isLoggedIn ? (
+            <>
+              <Link to="/dashboard" className="btn-secondary navbar__btn-try">Dashboard</Link>
+              <button
+                className="btn-primary navbar__btn-login"
+                onClick={async () => { await logout(); navigate('/') }}
+                id="nav-logout"
+              >Logout</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login?tab=signup" className="btn-secondary navbar__btn-signup" id="nav-signup">Sign Up</Link>
+              <Link to="/login" className="btn-primary navbar__btn-login" id="nav-login">Login</Link>
+            </>
+          )}
         </div>
 
         {/* Hamburger */}
@@ -70,10 +87,24 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       <div className={`navbar__mobile ${menuOpen ? 'navbar__mobile--open' : ''}`}>
-        <Link to="/docs"  className="navbar__mobile-link">Docs</Link>
-        <Link to="/ide"   className="navbar__mobile-link">IDE</Link>
-        <Link to="/login" className="navbar__mobile-link">Login</Link>
-        <Link to="/ide"   className="btn-primary navbar__mobile-cta">Try IDE Free</Link>
+        <Link to="/docs"         className="navbar__mobile-link">Docs</Link>
+        <Link to="/ide"          className="navbar__mobile-link">IDE</Link>
+        {isLoggedIn ? (
+          <>
+            <Link to="/dashboard" className="navbar__mobile-link">Dashboard</Link>
+            <button
+              className="navbar__mobile-link"
+              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              onClick={async () => { await logout(); navigate('/') }}
+            >Logout</button>
+          </>
+        ) : (
+          <>
+            <Link to="/login"          className="navbar__mobile-link">Login</Link>
+            <Link to="/login?tab=signup" className="navbar__mobile-link">Sign Up</Link>
+          </>
+        )}
+        <Link to="/ide" className="btn-primary navbar__mobile-cta">Try IDE Free</Link>
       </div>
     </nav>
   )

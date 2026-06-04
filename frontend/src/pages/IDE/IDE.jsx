@@ -1,16 +1,18 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Editor   from '../../components/Editor/Editor.jsx'
 import Terminal from '../../components/Terminal/Terminal.jsx'
 import Toast    from '../../components/Toast/Toast.jsx'
 import { runCode } from '../../runtime/index.js'
 import { runButtonPulse } from '../../animations/animations.js'
 import { saveFile, incrementRuns } from '../../utils/fileStorage.js'
+import { filesApi } from '../../api/files.js'
+import { useAuth } from '../../context/AuthContext.jsx'
 import './IDE.css'
 
 const DEFAULT_FILENAME = 'main.hs'
 
-const DEFAULT_CODE = `// Welcome to H-Script IDE 🔥
+const DEFAULT_CODE = `// Welcome to H-Script IDE \uD83D\uDD25
 // Write your code below and hit Run! (Ctrl+Enter)
 
 let_him_cook name = "bhai"
@@ -30,7 +32,7 @@ let_him_cook total = nums.reduce_karo(pov(acc, n) { wapas_karo acc + n }, 0)
 boliye(\`Sum: \${total}\`)
 `
 
-// ── URL share encoding ──────────────────────────────────
+// ── URL share encoding ────────────────────────────────────
 function encodeCode(code) {
   try { return btoa(unescape(encodeURIComponent(code))) } catch { return '' }
 }
@@ -38,34 +40,57 @@ function decodeCode(b64) {
   try { return decodeURIComponent(escape(atob(b64))) } catch { return null }
 }
 
+// ── Ensure filename is unique against existingNames list ──
+function makeUniqueName(name, existingNames) {
+  if (!existingNames.includes(name)) return name
+  const base = name.replace(/\.hs$/, '')
+  let i = 1
+  while (existingNames.includes(`${base}(${i}).hs`)) i++
+  return `${base}(${i}).hs`
+}
+
 export default function IDE() {
+  const { isLoggedIn }                    = useAuth()
+  const navigate                          = useNavigate()
   const [searchParams]                    = useSearchParams()
   const sharedCode                        = searchParams.get('code')
+  const fileId                            = searchParams.get('fileId') || null
   const initialCode                       = sharedCode ? (decodeCode(sharedCode) ?? DEFAULT_CODE) : DEFAULT_CODE
 
-  const [code,        setCode]            = useState(initialCode)
-  const [output,      setOutput]          = useState([])
-  const [errors,      setErrors]          = useState([])
-  const [isRunning,   setIsRunning]       = useState(false)
-  const [filename,    setFilename]        = useState(DEFAULT_FILENAME)
-  const [editingName, setEditingName]     = useState(false)
-  const [panelSize,   setPanelSize]       = useState(55)
-  const [saved,       setSaved]           = useState(false)       // unsaved dot state
-  const [toast,       setToast]           = useState(null)        // { msg, type }
-  const [lineCount,   setLineCount]       = useState(0)
-  const runBtnRef   = useRef(null)
-  const dividerRef  = useRef(null)
+  const [code,          setCode]          = useState(initialCode)
+  const [output,        setOutput]        = useState([])
+  const [errors,        setErrors]        = useState([])
+  const [isRunning,     setIsRunning]     = useState(false)
+  const [filename,      setFilename]      = useState(DEFAULT_FILENAME)
+  const [editingName,   setEditingName]   = useState(false)
+  const [panelSize,     setPanelSize]     = useState(55)
+  const [saved,         setSaved]         = useState(false)
+  const [toast,         setToast]         = useState(null)
+  const [lineCount,     setLineCount]     = useState(0)
+  const [dbFileId,      setDbFileId]      = useState(fileId)
+  const [showSaveModal, setShowSaveModal] = useState(false)   // post-save prompt
+  const [existingNames, setExistingNames] = useState([])      // for unique-name check
+  const runBtnRef  = useRef(null)
+  const dividerRef = useRef(null)
 
-  // Track line count from code
+  // Load existing filenames once on mount (logged-in users only)
+  useEffect(() => {
+    if (!isLoggedIn) return
+    filesApi.getAll()
+      .then(files => setExistingNames(files.map(f => f.filename)))
+      .catch(() => {})
+  }, [isLoggedIn])
+
+  // Track line count
   useEffect(() => {
     setLineCount((code || '').split('\n').length)
     setSaved(false)
   }, [code])
 
-  // ── Show toast helper ─────────────────────────────────
+  // ── Toast helper ─────────────────────────────────────────
   const showToast = (msg, type = 'success') => setToast({ msg, type })
 
-  // ── Run handler ───────────────────────────────────────
+  // ── Run handler ──────────────────────────────────────────
   const handleRun = useCallback(() => {
     if (isRunning) return
     try { runButtonPulse(runBtnRef.current) } catch (_) {}
@@ -82,14 +107,52 @@ export default function IDE() {
     })
   }, [code, isRunning, filename])
 
-  // ── Save to localStorage ──────────────────────────────
-  const handleSave = useCallback(() => {
-    saveFile(filename, code || '')
-    setSaved(true)
-    showToast(`"${filename}" saved! 💾`, 'success')
-  }, [filename, code])
+  // ── Save — unique name + post-save modal ─────────────────
+  const handleSave = useCallback(async () => {
+    try {
+      if (isLoggedIn) {
+        const isNew = !dbFileId
+        let usedName = filename
 
-  // ── Download .hs file ─────────────────────────────────
+        if (isNew) {
+          // New file: enforce unique name
+          const uniqueName = makeUniqueName(filename, existingNames)
+          if (uniqueName !== filename) {
+            setFilename(uniqueName)
+            usedName = uniqueName
+            showToast(`Renamed to "${uniqueName}" — duplicate name`, 'info')
+          }
+          const file = await filesApi.create(usedName, code || '')
+          setDbFileId(file.id)
+          setExistingNames(prev => [...prev, usedName])
+          setSaved(true)
+          // Show modal on first save of a brand-new file
+          setShowSaveModal(true)
+        } else {
+          // Updating: check if user renamed to a duplicate
+          const namesExceptSelf = existingNames.filter(n => n !== filename)
+          if (namesExceptSelf.includes(filename)) {
+            const uniqueName = makeUniqueName(filename, namesExceptSelf)
+            setFilename(uniqueName)
+            usedName = uniqueName
+            showToast(`Renamed to "${uniqueName}" — duplicate name`, 'info')
+          }
+          await filesApi.update(dbFileId, { filename: usedName, code: code || '' })
+          setSaved(true)
+          showToast(`"${usedName}" saved!`, 'success')
+        }
+      } else {
+        // Guest: save to localStorage
+        saveFile(filename, code || '')
+        setSaved(true)
+        showToast(`"${filename}" saved locally`, 'success')
+      }
+    } catch {
+      showToast('Save failed — is the backend running?', 'error')
+    }
+  }, [filename, code, isLoggedIn, dbFileId, existingNames])
+
+  // ── Download .hs ─────────────────────────────────────────
   const handleDownload = useCallback(() => {
     const blob = new Blob([code || ''], { type: 'text/plain' })
     const url  = URL.createObjectURL(blob)
@@ -98,21 +161,19 @@ export default function IDE() {
     a.download = filename.endsWith('.hs') ? filename : `${filename}.hs`
     a.click()
     URL.revokeObjectURL(url)
-    showToast('Downloaded! 📥', 'info')
+    showToast('Downloaded!', 'info')
   }, [code, filename])
 
-  // ── Share via URL ─────────────────────────────────────
+  // ── Share via URL ─────────────────────────────────────────
   const handleShare = useCallback(() => {
     const encoded = encodeCode(code || '')
     const url     = `${window.location.origin}/ide?code=${encoded}`
-    navigator.clipboard.writeText(url).then(() => {
-      showToast('Share link copied! 🔗', 'success')
-    }).catch(() => {
-      showToast('Could not copy link', 'error')
-    })
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('Share link copied!', 'success'))
+      .catch(() => showToast('Could not copy link', 'error'))
   }, [code])
 
-  // ── Keyboard shortcuts ────────────────────────────────
+  // ── Keyboard shortcuts ────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleRun() }
@@ -122,16 +183,15 @@ export default function IDE() {
     return () => window.removeEventListener('keydown', handler)
   }, [handleRun, handleSave])
 
-  // ── Clear output ──────────────────────────────────────
+  // ── Clear output ──────────────────────────────────────────
   const handleClear = () => { setOutput([]); setErrors([]) }
 
-  // ── Draggable divider ─────────────────────────────────
+  // ── Draggable divider ─────────────────────────────────────
   const startDrag = (e) => {
     e.preventDefault()
     const startX   = e.clientX
     const startPct = panelSize
     const totalW   = document.querySelector('.ide__panels')?.clientWidth ?? 1
-
     const onMove = (ev) => {
       const pct = startPct + ((ev.clientX - startX) / totalW) * 100
       setPanelSize(Math.min(80, Math.max(20, pct)))
@@ -144,7 +204,7 @@ export default function IDE() {
     window.addEventListener('mouseup',   onUp)
   }
 
-  // ── File rename ───────────────────────────────────────
+  // ── File rename ───────────────────────────────────────────
   const handleRename = (e) => {
     if (e.key === 'Enter' || e.type === 'blur') {
       setEditingName(false)
@@ -155,10 +215,8 @@ export default function IDE() {
   return (
     <div className="ide" id="ide-page">
 
-      {/* ── Top bar ──────────────────────────────────── */}
+      {/* ── Top bar ─────────────────────────────────────── */}
       <div className="ide__topbar">
-
-        {/* Logo / Home */}
         <Link to="/" className="ide__logo" id="ide-home-link" title="Back to Home">
           <span className="ide__logo-icon">H</span>
           <span className="ide__logo-text">Script</span>
@@ -195,12 +253,20 @@ export default function IDE() {
           <Link to="/docs" className="ide__btn ide__btn--docs" id="btn-docs" title="Docs">
             📖 Docs
           </Link>
-          <button className="ide__btn ide__btn--icon" onClick={handleShare} title="Share (copy link)" id="btn-share">
-            🔗
-          </button>
-          <button className="ide__btn ide__btn--icon" onClick={handleDownload} title="Download .hs" id="btn-download">
-            ⬇
-          </button>
+
+          {/* Auth-aware buttons */}
+          {isLoggedIn ? (
+            <Link to="/dashboard" className="ide__btn ide__btn--docs" id="btn-dashboard" title="Dashboard">
+              📊 Dashboard
+            </Link>
+          ) : (
+            <Link to="/login?tab=signup" className="ide__btn ide__btn--docs" id="btn-signup" title="Sign Up" style={{ color: 'var(--accent-secondary)' }}>
+              ✦ Sign Up
+            </Link>
+          )}
+
+          <button className="ide__btn ide__btn--icon" onClick={handleShare} title="Share" id="btn-share">🔗</button>
+          <button className="ide__btn ide__btn--icon" onClick={handleDownload} title="Download .hs" id="btn-download">⬇</button>
           <button className="ide__btn ide__btn--save" onClick={handleSave} title="Save (Ctrl+S)" id="btn-save">
             💾 Save
           </button>
@@ -212,7 +278,7 @@ export default function IDE() {
             className={`ide__btn ide__btn--run ${isRunning ? 'running' : ''}`}
             onClick={handleRun}
             disabled={isRunning}
-            title="Run  (Ctrl+Enter)"
+            title="Run (Ctrl+Enter)"
             id="btn-run"
           >
             {isRunning ? '⟳ Running...' : '▶ Run'}
@@ -220,13 +286,10 @@ export default function IDE() {
         </div>
       </div>
 
-      {/* ── Editor + Terminal ─────────────────────────── */}
+      {/* ── Editor + Terminal ───────────────────────────── */}
       <div className="ide__panels">
         <div className="ide__editor-panel" style={{ width: `${panelSize}%` }}>
-          <Editor
-            value={code}
-            onChange={(val) => setCode(val ?? '')}
-          />
+          <Editor value={code} onChange={(val) => setCode(val ?? '')} />
         </div>
 
         <div className="ide__divider" ref={dividerRef} onMouseDown={startDrag} title="Drag to resize">
@@ -238,7 +301,7 @@ export default function IDE() {
         </div>
       </div>
 
-      {/* ── Status bar ───────────────────────────────── */}
+      {/* ── Status bar ──────────────────────────────────── */}
       <div className="ide__statusbar">
         <span className="ide__status-lang">🔥 H-Script</span>
         <span className="ide__status-hint">Ctrl+Enter · run &nbsp;|&nbsp; Ctrl+S · save</span>
@@ -252,13 +315,39 @@ export default function IDE() {
         </span>
       </div>
 
-      {/* ── Toast ────────────────────────────────────── */}
+      {/* ── Post-save modal ──────────────────────────────── */}
+      {showSaveModal && (
+        <div className="ide__modal-overlay" onClick={() => setShowSaveModal(false)}>
+          <div className="ide__modal" onClick={e => e.stopPropagation()}>
+            <div className="ide__modal-icon">💾</div>
+            <h3 className="ide__modal-title">File Saved!</h3>
+            <p className="ide__modal-msg">
+              <strong>"{filename}"</strong> has been saved to your account.
+              <br />What would you like to do next?
+            </p>
+            <div className="ide__modal-actions">
+              <button
+                className="ide__modal-btn ide__modal-btn--primary"
+                id="modal-dashboard"
+                onClick={() => { setShowSaveModal(false); navigate('/dashboard') }}
+              >
+                📊 Go to Dashboard
+              </button>
+              <button
+                className="ide__modal-btn ide__modal-btn--secondary"
+                id="modal-stay"
+                onClick={() => setShowSaveModal(false)}
+              >
+                ⚡ Stay in IDE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast ───────────────────────────────────────── */}
       {toast && (
-        <Toast
-          message={toast.msg}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+        <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   )
