@@ -1,6 +1,6 @@
 """
 H-Script AI Service — FastAPI entry point
-Phase 5C: Gemini 1.5 Flash — Explain / Generate / Fix / Autocomplete / Agent
+Phase 5C: Groq (llama-3.1-8b-instant) — Explain / Generate / Fix / Autocomplete / Agent
 """
 import os
 from fastapi import FastAPI, Request
@@ -20,7 +20,7 @@ from api.agent         import router as agent_router
 app = FastAPI(
     title="H-Script AI Service",
     version="2.0.0",
-    description="Gemini-powered AI: explain, generate, fix, autocomplete, and agentic chat."
+    description="Groq-powered AI (llama-3.1-8b-instant): explain, generate, fix, autocomplete, and agentic chat."
 )
 
 app.add_middleware(
@@ -51,7 +51,7 @@ def health():
         "status": "OK",
         "service": "H-Script AI",
         "version": "2.0.0",
-        "model": "gemini-1.5-flash",
+        "model": "llama-3.1-8b-instant (Groq)",
         "endpoints": [
             "/ai/explain",
             "/ai/generate",
