@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: {
       '/api':  'http://localhost:5000',
       '/auth': 'http://localhost:5000',
+      '/ai':   'http://localhost:8000',
     }
   },
   resolve: {

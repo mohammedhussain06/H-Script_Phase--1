@@ -3,10 +3,12 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Editor   from '../../components/Editor/Editor.jsx'
 import Terminal from '../../components/Terminal/Terminal.jsx'
 import Toast    from '../../components/Toast/Toast.jsx'
+import AIPanel  from '../../components/AIPanel/AIPanel.jsx'
 import { runCode } from '../../runtime/index.js'
 import { runButtonPulse } from '../../animations/animations.js'
 import { saveFile, incrementRuns } from '../../utils/fileStorage.js'
 import { filesApi } from '../../api/files.js'
+import { autocomplete, explainError } from '../../api/ai.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import './IDE.css'
 
@@ -57,21 +59,26 @@ export default function IDE() {
   const fileId                            = searchParams.get('fileId') || null
   const initialCode                       = sharedCode ? (decodeCode(sharedCode) ?? DEFAULT_CODE) : DEFAULT_CODE
 
-  const [code,          setCode]          = useState(initialCode)
-  const [output,        setOutput]        = useState([])
-  const [errors,        setErrors]        = useState([])
-  const [isRunning,     setIsRunning]     = useState(false)
-  const [filename,      setFilename]      = useState(DEFAULT_FILENAME)
-  const [editingName,   setEditingName]   = useState(false)
-  const [panelSize,     setPanelSize]     = useState(55)
-  const [saved,         setSaved]         = useState(false)
-  const [toast,         setToast]         = useState(null)
-  const [lineCount,     setLineCount]     = useState(0)
-  const [dbFileId,      setDbFileId]      = useState(fileId)
-  const [showSaveModal, setShowSaveModal] = useState(false)   // post-save prompt
-  const [existingNames, setExistingNames] = useState([])      // for unique-name check
-  const runBtnRef  = useRef(null)
-  const dividerRef = useRef(null)
+  const [code,           setCode]          = useState(initialCode)
+  const [output,         setOutput]        = useState([])
+  const [errors,         setErrors]        = useState([])
+  const [isRunning,      setIsRunning]     = useState(false)
+  const [filename,       setFilename]      = useState(DEFAULT_FILENAME)
+  const [editingName,    setEditingName]   = useState(false)
+  const [panelSize,      setPanelSize]     = useState(55)
+  const [saved,          setSaved]         = useState(false)
+  const [toast,          setToast]         = useState(null)
+  const [lineCount,      setLineCount]     = useState(0)
+  const [dbFileId,       setDbFileId]      = useState(fileId)
+  const [showSaveModal,  setShowSaveModal] = useState(false)
+  const [existingNames,  setExistingNames] = useState([])
+  // AI state
+  const [aiOpen,         setAiOpen]        = useState(false)
+  const [aiSuggestion,   setAiSuggestion]  = useState('')    // ghost text
+  const [aiErrorInfo,    setAiErrorInfo]   = useState(null)  // { error_type, explanation, hint }
+  const runBtnRef   = useRef(null)
+  const dividerRef  = useRef(null)
+  const acTimerRef  = useRef(null)   // autocomplete debounce timer
 
   // Load existing filenames once on mount (logged-in users only)
   useEffect(() => {
@@ -81,10 +88,26 @@ export default function IDE() {
       .catch(() => {})
   }, [isLoggedIn])
 
-  // Track line count
+  // Track line count + trigger autocomplete (debounced 2500ms)
   useEffect(() => {
     setLineCount((code || '').split('\n').length)
     setSaved(false)
+
+    // Autocomplete debounce — 2500ms to stay within free tier rate limits
+    clearTimeout(acTimerRef.current)
+    if (code && code.trim().length > 5) {
+      acTimerRef.current = setTimeout(async () => {
+        try {
+          const completions = await autocomplete(code)
+          if (completions && completions.length > 0) {
+            setAiSuggestion(completions[0])
+          }
+        } catch { /* silent fail */ }
+      }, 2500)
+    } else {
+      setAiSuggestion('')
+    }
+    return () => clearTimeout(acTimerRef.current)
   }, [code])
 
   // ── Toast helper ─────────────────────────────────────────
@@ -104,6 +127,16 @@ export default function IDE() {
       setErrors(result.errors)
       setIsRunning(false)
       incrementRuns(filename)
+
+      // Auto-trigger error explainer if errors returned
+      if (result.errors && result.errors.length > 0) {
+        setAiErrorInfo(null)
+        explainError(code || '', result.errors.join(' ')).then(info => {
+          setAiErrorInfo(info)
+        }).catch(() => {})
+      } else {
+        setAiErrorInfo(null)
+      }
     })
   }, [code, isRunning, filename])
 
@@ -267,6 +300,15 @@ export default function IDE() {
 
           <button className="ide__btn ide__btn--icon" onClick={handleShare} title="Share" id="btn-share">🔗</button>
           <button className="ide__btn ide__btn--icon" onClick={handleDownload} title="Download .hs" id="btn-download">⬇</button>
+          <button
+            className={`ide__btn ide__btn--ai ${aiOpen ? 'active' : ''}`}
+            onClick={() => setAiOpen(o => !o)}
+            title="AI Assistant"
+            id="btn-ai"
+          >
+            ✦ AI
+          </button>
+
           <button className="ide__btn ide__btn--save" onClick={handleSave} title="Save (Ctrl+S)" id="btn-save">
             💾 Save
           </button>
@@ -287,9 +329,9 @@ export default function IDE() {
       </div>
 
       {/* ── Editor + Terminal ───────────────────────────── */}
-      <div className="ide__panels">
+      <div className="ide__panels" style={{ marginRight: aiOpen ? '380px' : '0', transition: 'margin-right 0.22s ease' }}>
         <div className="ide__editor-panel" style={{ width: `${panelSize}%` }}>
-          <Editor value={code} onChange={(val) => setCode(val ?? '')} />
+          <Editor value={code} onChange={(val) => setCode(val ?? '')} ghostText={aiSuggestion} />
         </div>
 
         <div className="ide__divider" ref={dividerRef} onMouseDown={startDrag} title="Drag to resize">
@@ -297,6 +339,17 @@ export default function IDE() {
         </div>
 
         <div className="ide__terminal-panel" style={{ width: `${100 - panelSize}%` }}>
+          {/* AI Error Explainer banner — auto-shown when run produces errors */}
+          {aiErrorInfo && (
+            <div className="ide__ai-error-banner" id="ai-error-banner">
+              <div className="ide__ai-error-header">
+                <span className="ide__ai-error-type">✦ {aiErrorInfo.error_type}</span>
+                <button className="ide__ai-error-close" onClick={() => setAiErrorInfo(null)}>✕</button>
+              </div>
+              <p className="ide__ai-error-msg">{aiErrorInfo.explanation}</p>
+              {aiErrorInfo.hint && <p className="ide__ai-error-hint">💡 {aiErrorInfo.hint}</p>}
+            </div>
+          )}
           <Terminal output={output} errors={errors} isRunning={isRunning} />
         </div>
       </div>
@@ -344,6 +397,15 @@ export default function IDE() {
           </div>
         </div>
       )}
+
+      {/* ── AI Panel ─────────────────────────────────────── */}
+      <AIPanel
+        isOpen={aiOpen}
+        onClose={() => setAiOpen(false)}
+        editorCode={code}
+        onInsertCode={(generated) => setCode(prev => prev + '\n\n' + generated)}
+        onApplyFix={(fixedCode) => { setCode(fixedCode); showToast('Fix applied! ✓', 'success') }}
+      />
 
       {/* ── Toast ───────────────────────────────────────── */}
       {toast && (

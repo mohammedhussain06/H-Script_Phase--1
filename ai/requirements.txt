@@ -1,16 +1,7 @@
 # H-Script AI Service — Requirements
-# Install in phases to avoid dependency conflicts
-
-# ── Phase 5A/5B: Core API (install now) ─────────────────
 fastapi
 uvicorn[standard]
 pydantic
 python-dotenv
 httpx
-
-# ── Phase 5C: NLP + ML (install when needed) ────────────
-# pip install spacy
-# python -m spacy download en_core_web_sm
-# pip install scikit-learn
-# pip install transformers
-# pip install torch --index-url https://download.pytorch.org/whl/cpu
+groq

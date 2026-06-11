@@ -1,12 +1,14 @@
 # error_explainer.py — H-Script error → human explanation
-# TODO Phase 5C: parse error type + message → friendly explanation + fix suggestion
+# Implemented: via POST /ai/explain-error (ai/api/explain_error.py)
+# Classifies error type, generates Hinglish explanation + fix suggestion via Groq.
 
 def explain_error(error_type: str, message: str, code: str) -> dict:
     """
-    Returns { explanation: str, suggestion: str, fixed_code: str }
+    Implemented — see ai/api/explain_error.py for the live FastAPI endpoint.
+    Returns { explanation, suggestion, error_type } powered by Llama 3.1 via Groq.
     """
     return {
-        "explanation": "Coming in Phase 5C",
-        "suggestion": "",
-        "fixed_code": code
+        "status": "implemented",
+        "endpoint": "POST /ai/explain-error",
+        "note": "Call the FastAPI endpoint for live AI-powered explanations.",
     }

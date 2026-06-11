@@ -37,13 +37,13 @@ Focus was correctness and learning, not syntax perfection.
 
 ---
 
-## Known Limitations (Intentional)
-- No module system
-- No standard library
-- No error recovery
-- `super` not implemented
-- Grammar not finalized
-- Syntax inconsistencies exist
+## Phase 1 Limitations (All resolved in later phases)
+- ~~No module system~~ → **Implemented** (Phase 3 — `import_karo`)
+- ~~No standard library~~ → **Implemented** (Phase 3 — 27 stdlib functions)
+- ~~No error recovery~~ → **Implemented** (Phase 3 — `agar_risk` / `pakad_lo`)
+- ~~`super` not implemented~~ → **Implemented** (Phase 3 — `buzurg` keyword)
+- ~~Grammar not finalized~~ → **Finalized** (Phase 2)
+- ~~Syntax inconsistencies~~ → **Resolved** (Phase 2 rewrite)
 
 ---
 

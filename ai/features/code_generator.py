@@ -1,8 +1,14 @@
 # code_generator.py — Natural language → H-Script code
-# TODO Phase 5C: prompt → H-Script code using fine-tuned model
+# Implemented: via POST /ai/generate (ai/api/generate.py)
+# Powered by Llama 3.1 8B Instant via Groq. Returns parsed code + explanation.
 
 def generate_code(prompt: str, context: str = "") -> str:
     """
-    Returns H-Script code string
+    Implemented — see ai/api/generate.py for the live FastAPI endpoint.
+    Supports context injection (current editor content) for coherent code generation.
     """
-    return "// Code generation coming in Phase 5C"
+    return {
+        "status": "implemented",
+        "endpoint": "POST /ai/generate",
+        "note": "Call the FastAPI endpoint for live AI-powered code generation.",
+    }

@@ -12,7 +12,7 @@
 | **React Router v6** | Client-side routing |
 | **Monaco Editor** | VS Code editor in the browser |
 | **Anime.js** | Scroll animations, entrance effects |
-| **Three.js** | 3D background (reserved for future) |
+| **Three.js** | Neural network particle animation in AI panel header |
 | **Vanilla CSS** | All styling — no Tailwind |
 | **localStorage** | File persistence (no backend needed) |
 
@@ -36,8 +36,8 @@ frontend/src/
 │   ├── Editor/                # Monaco wrapper
 │   ├── Terminal/              # Output console
 │   ├── Toast/                 # Notifications
-│   ├── AIPanel/               # Placeholder (Phase 5C)
-│   └── FileTree/              # Placeholder (Phase 5B)
+│   ├── AIPanel/               # AI chat + generate panel (Phase 5C — Implemented)
+│   └── FileTree/              # File manager (managed via Dashboard)
 ├── runtime/                   # H-Script browser engine
 │   ├── index.js               # Entry: runCode(), getKeywords()
 │   ├── lexer.js               # Tokenizer
@@ -143,8 +143,8 @@ Features: copy button, "Try in IDE" button, plain English explanations, comparis
 | **Editor** | Monaco wrapper, custom hscript language + theme, loading skeleton |
 | **Terminal** | Displays output/errors from runtime, running state indicator |
 | **Toast** | success/error/info, auto-dismiss 2.8s, slide-up animation |
-| **AIPanel** | Placeholder for Phase 5C |
-| **FileTree** | Placeholder for Phase 5B |
+| **AIPanel** | AI assistant slide-in panel — Chat (agentic), Generate, Three.js neural header |
+| **NeuralCanvas** | Three.js particle/node animation — pulses while AI is thinking |
 
 ---
 
@@ -216,12 +216,13 @@ const { output, errors } = runCode(codeString)
 
 ---
 
-## What Needs Backend (Phase 5B+)
+## Implemented Features Summary
 
-| Feature | Phase |
+| Feature | Status |
 |---|---|
-| Auth session / JWT | 5B |
-| Files synced across devices | 5B |
-| Server-side code execution | 5B |
-| AI assistant UI + panel | 5C |
-| User profile page | 5B |
+| Auth (JWT + GitHub OAuth) | ✅ Implemented |
+| Files synced to Postgres via backend | ✅ Implemented |
+| Server-side code execution | ✅ Implemented |
+| AI assistant panel (chat, generate, explain, fix) | ✅ Implemented |
+| Agentic AI with tool calling | ✅ Implemented |
+| Three.js neural network in AI panel | ✅ Implemented |

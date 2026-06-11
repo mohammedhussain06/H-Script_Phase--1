@@ -40,7 +40,7 @@ const FEATURES = [
     icon: '🤖',
     title: 'AI Assistant',
     desc: 'Agentic AI that understands H-Script. Ask it to generate code, debug errors, review your file, or explain anything.',
-    tag: 'Coming Soon',
+    tag: 'Live ✦',
     color: '#10b981',
   },
   {

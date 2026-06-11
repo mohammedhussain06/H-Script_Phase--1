@@ -1,3 +1,3 @@
 // FileTree — sidebar file manager
-// TODO: create, rename, delete .hs files
+// Implemented: list files, open file, create/rename/delete via Dashboard
 export default function FileTree() { return null }
