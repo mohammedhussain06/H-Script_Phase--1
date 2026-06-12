@@ -14,6 +14,8 @@ export default function AIPanel({ isOpen, onClose, editorCode, onInsertCode, onA
   const [loading, setLoading]     = useState(false)
   const [genResult, setGenResult] = useState(null)
   const [genLoading, setGenLoading] = useState(false)
+  const [rejected, setRejected]   = useState(new Set())   // indices of rejected messages
+  const [copied, setCopied]       = useState(null)         // index or 'gen'
   const messagesEndRef            = useRef(null)
   const textareaRef               = useRef(null)
 
@@ -57,6 +59,23 @@ export default function AIPanel({ isOpen, onClose, editorCode, onInsertCode, onA
     } finally {
       setGenLoading(false)
     }
+  }
+
+  // Extract first code block from a message string
+  function extractCode(content) {
+    const match = content.match(/```[a-z]*\n?([\s\S]*?)```/)
+    return match ? match[1].trim() : null
+  }
+
+  function handleCopyCode(code, key) {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(key)
+      setTimeout(() => setCopied(null), 1800)
+    })
+  }
+
+  function handleReject(index) {
+    setRejected(prev => new Set([...prev, index]))
   }
 
   function renderContent(content) {
@@ -123,13 +142,50 @@ export default function AIPanel({ isOpen, onClose, editorCode, onInsertCode, onA
                     : <span className="aipanel__user-avatar">you</span>
                   }
                 </div>
-                <div className="aipanel__msg-body">
+              <div className="aipanel__msg-body">
                   <div className="aipanel__msg-content">
                     {renderContent(msg.content)}
                   </div>
-                  {msg.action === 'fix' && msg.result?.suggestion && (
+
+                  {/* Accept / Reject / Copy for messages with code */}
+                  {msg.role === 'assistant' && !rejected.has(i) && (() => {
+                    const code = extractCode(msg.content)
+                    if (!code) return null
+                    const isFixAction = msg.action === 'fix' && msg.result?.suggestion
+                    return (
+                      <div className="aipanel__code-actions">
+                        <button
+                          className="aipanel__action-btn aipanel__action-btn--accept"
+                          id={`accept-code-${i}`}
+                          onClick={() => {
+                            if (isFixAction) onApplyFix && onApplyFix(msg.result.suggestion)
+                            else onInsertCode && onInsertCode(code)
+                          }}
+                        >
+                          ✓ Accept
+                        </button>
+                        <button
+                          className="aipanel__action-btn aipanel__action-btn--copy"
+                          id={`copy-code-${i}`}
+                          onClick={() => handleCopyCode(code, i)}
+                        >
+                          {copied === i ? '✓ Copied!' : '⧑ Copy'}
+                        </button>
+                        <button
+                          className="aipanel__action-btn aipanel__action-btn--reject"
+                          id={`reject-code-${i}`}
+                          onClick={() => handleReject(i)}
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Legacy fix button fallback (no code block case) */}
+                  {msg.action === 'fix' && msg.result?.suggestion && !extractCode(msg.content) && !rejected.has(i) && (
                     <button
-                      className="aipanel__accept-btn"
+                      className="aipanel__action-btn aipanel__action-btn--accept"
                       onClick={() => onApplyFix && onApplyFix(msg.result.suggestion)}
                       id={`accept-fix-${i}`}
                     >
@@ -235,13 +291,29 @@ export default function AIPanel({ isOpen, onClose, editorCode, onInsertCode, onA
                 <>
                   <div className="aipanel__gen-code-header">
                     <span>Generated Code</span>
-                    <button
-                      className="aipanel__insert-btn"
-                      onClick={() => onInsertCode && onInsertCode(genResult.code)}
-                      id="ai-insert-code"
-                    >
-                      ↗ Insert into Editor
-                    </button>
+                    <div className="aipanel__gen-header-actions">
+                      <button
+                        className="aipanel__action-btn aipanel__action-btn--copy"
+                        onClick={() => handleCopyCode(genResult.code, 'gen')}
+                        id="ai-copy-code"
+                      >
+                        {copied === 'gen' ? '✓ Copied!' : '⧑ Copy'}
+                      </button>
+                      <button
+                        className="aipanel__action-btn aipanel__action-btn--accept"
+                        onClick={() => onInsertCode && onInsertCode(genResult.code)}
+                        id="ai-insert-code"
+                      >
+                        ↗ Accept
+                      </button>
+                      <button
+                        className="aipanel__action-btn aipanel__action-btn--reject"
+                        onClick={() => setGenResult(null)}
+                        id="ai-reject-code"
+                      >
+                        ✕ Reject
+                      </button>
+                    </div>
                   </div>
                   <pre className="aipanel__code-block aipanel__code-block--result">
                     <code>{genResult.code}</code>
