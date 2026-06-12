@@ -421,6 +421,20 @@
   transform: translateY(-2px);
 }
 
+.ide__modal-dismiss {
+  background: none;
+  border: none;
+  color: rgba(148, 163, 184, 0.45);
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.2s;
+  font-family: var(--font-sans);
+}
+.ide__modal-dismiss:hover { color: rgba(148, 163, 184, 0.8); }
+
 /* ── AI Button ───────────────────────────────────────── */
 .ide__btn--ai {
   background: rgba(124, 58, 237, 0.12);

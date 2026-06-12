@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import anime from 'animejs/lib/anime.es.js'
+import DocsCanvas from './DocsCanvas.jsx'
 import './Docs.css'
 
 /* ── Copy-to-clipboard hook ─────────────────────────── */
@@ -530,29 +532,87 @@ agar_risk {
 
 /* ── MAIN DOCS PAGE ─────────────────────────────────── */
 export default function Docs() {
-  const [active, setActive] = useState('intro')
-  const contentRef = useRef(null)
+  const [active, setActive]     = useState('intro')
+  const contentRef  = useRef(null)
+  const bodyRef     = useRef(null)
+  const titleRef    = useRef(null)
+  const titleIconRef = useRef(null)
 
   const section = SECTIONS.find(s => s.id === active) || SECTIONS[0]
 
+  // Scroll to top on section change
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollTop = 0
   }, [active])
+
+  // Animate content in whenever section changes
+  useEffect(() => {
+    if (bodyRef.current) {
+      anime({
+        targets: bodyRef.current,
+        opacity: [0, 1],
+        translateY: [18, 0],
+        duration: 380,
+        easing: 'easeOutCubic',
+      })
+    }
+    if (titleIconRef.current) {
+      anime({
+        targets: titleIconRef.current,
+        scale: [0.6, 1],
+        rotate: ['-10deg', '0deg'],
+        duration: 420,
+        easing: 'spring(1, 80, 12, 0)',
+      })
+    }
+    // Stagger concept cards
+    setTimeout(() => {
+      const cards = bodyRef.current?.querySelectorAll('.docs-concept-card, .docs-compare, .docs-type-pill')
+      if (cards && cards.length) {
+        anime({
+          targets: Array.from(cards),
+          opacity: [0, 1],
+          translateY: [14, 0],
+          delay: anime.stagger(60),
+          duration: 320,
+          easing: 'easeOutQuad',
+        })
+      }
+    }, 80)
+  }, [active])
+
+  // Handle nav click with indicator animation
+  function handleNav(id) {
+    if (id === active) return
+    // Slide body out briefly, then switch
+    anime({
+      targets: bodyRef.current,
+      opacity: [1, 0],
+      translateY: [0, -10],
+      duration: 140,
+      easing: 'easeInQuad',
+      complete: () => setActive(id),
+    })
+  }
 
   return (
     <div className="docs" id="docs-page">
 
       {/* ── Sidebar ───────────────────────────────────── */}
       <aside className="docs__sidebar">
-        <div className="docs__sidebar-header">
-          <Link to="/" className="docs__back-home" id="docs-home-link">
-            ← Home
-          </Link>
-          <div className="docs__sidebar-title">
-            <span className="docs__sidebar-logo-icon">H</span>
-            <span>Script Docs</span>
+        {/* Three.js header canvas */}
+        <div className="docs__sidebar-canvas-wrap">
+          <DocsCanvas />
+          <div className="docs__sidebar-header">
+            <Link to="/" className="docs__back-home" id="docs-home-link">
+              ← Home
+            </Link>
+            <div className="docs__sidebar-title">
+              <span className="docs__sidebar-logo-icon">H</span>
+              <span>Script Docs</span>
+            </div>
+            <div className="docs__sidebar-sub">Your complete beginner guide</div>
           </div>
-          <div className="docs__sidebar-sub">Your complete beginner guide</div>
         </div>
 
         <nav className="docs__nav">
@@ -561,7 +621,7 @@ export default function Docs() {
               key={s.id}
               id={`nav-${s.id}`}
               className={`docs__nav-item ${active === s.id ? 'active' : ''}`}
-              onClick={() => setActive(s.id)}
+              onClick={() => handleNav(s.id)}
             >
               <span className="docs__nav-icon">{s.icon}</span>
               <span className="docs__nav-label">{s.label}</span>
@@ -581,14 +641,14 @@ export default function Docs() {
       <main className="docs__content" ref={contentRef}>
 
         {/* Page header */}
-        <div className="docs__page-header">
+        <div className="docs__page-header" ref={titleRef}>
           <div className="docs__breadcrumb">
             <span>Docs</span>
             <span>/</span>
             <span>{section.label}</span>
           </div>
           <h1 className="docs__title">
-            <span className="docs__title-icon">{section.icon}</span>
+            <span className="docs__title-icon" ref={titleIconRef}>{section.icon}</span>
             {section.label}
           </h1>
           {section.phase && (
@@ -599,7 +659,7 @@ export default function Docs() {
         </div>
 
         {/* Section body */}
-        <div className="docs__body">
+        <div className="docs__body" ref={bodyRef}>
           {section.content()}
         </div>
 

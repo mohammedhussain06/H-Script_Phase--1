@@ -70,8 +70,9 @@ export default function IDE() {
   const [toast,          setToast]         = useState(null)
   const [lineCount,      setLineCount]     = useState(0)
   const [dbFileId,       setDbFileId]      = useState(fileId)
-  const [showSaveModal,  setShowSaveModal] = useState(false)
-  const [existingNames,  setExistingNames] = useState([])
+  const [showSaveModal,   setShowSaveModal]  = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const [existingNames,   setExistingNames]   = useState([])
   // AI state
   const [aiOpen,         setAiOpen]        = useState(false)
   const [aiSuggestion,   setAiSuggestion]  = useState('')    // ghost text
@@ -175,10 +176,8 @@ export default function IDE() {
           showToast(`"${usedName}" saved!`, 'success')
         }
       } else {
-        // Guest: save to localStorage
-        saveFile(filename, code || '')
-        setSaved(true)
-        showToast(`"${filename}" saved locally`, 'success')
+        // Guest: block save — prompt to sign in
+        setShowLoginPrompt(true)
       }
     } catch {
       showToast('Save failed — is the backend running?', 'error')
@@ -309,8 +308,13 @@ export default function IDE() {
             ✦ AI
           </button>
 
-          <button className="ide__btn ide__btn--save" onClick={handleSave} title="Save (Ctrl+S)" id="btn-save">
-            💾 Save
+          <button
+            className="ide__btn ide__btn--save"
+            onClick={handleSave}
+            title={isLoggedIn ? 'Save (Ctrl+S)' : 'Sign in to save your files'}
+            id="btn-save"
+          >
+            {isLoggedIn ? '💾' : '🔒'} Save
           </button>
           <button className="ide__btn ide__btn--clear" onClick={handleClear} title="Clear output" id="btn-clear">
             ✕ Clear
@@ -394,6 +398,42 @@ export default function IDE() {
                 ⚡ Stay in IDE
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sign-in to save prompt ────────────────────────── */}
+      {showLoginPrompt && (
+        <div className="ide__modal-overlay" onClick={() => setShowLoginPrompt(false)}>
+          <div className="ide__modal" onClick={e => e.stopPropagation()}>
+            <div className="ide__modal-icon">🔒</div>
+            <h3 className="ide__modal-title">Sign in to Save</h3>
+            <p className="ide__modal-msg">
+              Your code is safe in this session, but to permanently save files
+              and access them anywhere you need an account.
+            </p>
+            <div className="ide__modal-actions">
+              <button
+                className="ide__modal-btn ide__modal-btn--primary"
+                id="modal-login"
+                onClick={() => navigate('/login')}
+              >
+                🔑 Log In
+              </button>
+              <button
+                className="ide__modal-btn ide__modal-btn--secondary"
+                id="modal-signup"
+                onClick={() => navigate('/login?tab=signup')}
+              >
+                ✦ Sign Up Free
+              </button>
+            </div>
+            <button
+              className="ide__modal-dismiss"
+              onClick={() => setShowLoginPrompt(false)}
+            >
+              Continue as guest
+            </button>
           </div>
         </div>
       )}
